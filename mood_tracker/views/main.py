@@ -8,28 +8,13 @@ from textual.widgets import Static
 from textual import events
 
 from ..models.storage import load_moods, save_moods, MoodEntry
-from ..theme import DEFAULT_THEME_NAME, THEMES, get_palette
+from ..theme import DEFAULT_THEME_NAME, THEMES, get_palette, get_border_style
 from ..models.preferences import load_preferences, save_preferences, UserPreferences
 
-                                        # ASCII box pieces
-BOX_WIDTH = 74
+BOX_WIDTH = 74                      # ASCII box pieces
 INNER_WIDTH = BOX_WIDTH - 2
 
-BOX_TOP = "┌" + "─" * INNER_WIDTH + "┐"
-BOX_BOTTOM = "└" + "─" * INNER_WIDTH + "┘"
-MOOD_TRACKER_HEADER = BOX_TOP
-MOOD_HISTORY_DIVIDER = "├" + "─" * INNER_WIDTH + "┤"
-
-def _create_section_divider(label: str) -> str:
-    """Create a divider line with centered label text."""
-    label_with_spaces = f" {label} "
-    remaining = INNER_WIDTH - len(label_with_spaces)
-    left_dashes = remaining // 2
-    right_dashes = remaining - left_dashes
-    
-    return f"├{'─' * left_dashes}{label_with_spaces}{'─' * right_dashes}┤"
-
-MOOD_OPTIONS = [                                        # Mood options as (label_for_ui, numeric_score_to_save)
+MOOD_OPTIONS = [                      # Mood options as (label_for_ui, numeric_score_to_save)
     (":D  Great", 9),
     (":)  Good", 7),
     (":|  Meh", 5),
@@ -395,9 +380,68 @@ class MainScreen(Screen):
     def _get_centered_padding(self) -> int:
         """Calculate left padding needed to center the box on the screen."""
         terminal_width = self.size.width
-        box_width = len(BOX_TOP)
+        box_width = BOX_WIDTH
         padding = max(0, (terminal_width - box_width) // 2)    # Calculate padding, ensuring it's never negative
         return padding
+
+    def _create_top_border(self) -> str:
+        """Generate the top border using current theme's border style.
+        
+        This creates a border like: ┌──────────┐
+        The corner characters and horizontal line come from the theme's BorderStyle.
+        """
+        return (
+            self.border_style.top_left + 
+            self.border_style.horizontal * INNER_WIDTH + 
+            self.border_style.top_right
+        )
+
+    def _create_bottom_border(self) -> str:
+        """Generate the bottom border using current theme's border style.
+        
+        This creates a border like: └──────────┘
+        The corner characters and horizontal line come from the theme's BorderStyle.
+        """
+        return (
+            self.border_style.bottom_left + 
+            self.border_style.horizontal * INNER_WIDTH + 
+            self.border_style.bottom_right
+        )
+
+    def _create_section_divider(self, label: str) -> str:
+        """Generate a section divider with centered text using current theme's style.
+        
+        This creates a divider like: ├─────── Label ───────┤
+        The characters come from the theme's BorderStyle, and the label is centered.
+        """
+        label_with_spaces = f" {label} "
+        remaining = INNER_WIDTH - len(label_with_spaces)
+        left_dashes = remaining // 2
+        right_dashes = remaining - left_dashes
+        
+        return (
+            self.border_style.divider_left +
+            self.border_style.divider_horizontal * left_dashes +
+            label_with_spaces +
+            self.border_style.divider_horizontal * right_dashes +
+            self.border_style.divider_right
+        )
+
+    def _apply_border_color(self, border_text: str) -> str:
+        """Apply color or gradient to border text based on theme's border style.
+        
+        If the theme uses gradients and supports them, apply a gradient.
+        Otherwise, use the solid fallback color.
+        This ensures borders always look good even on terminals without gradient support.
+        """
+        if self.border_style.use_gradient and self.border_style.gradient_colors:
+            # Apply gradient from first color to second color
+            color1, color2 = self.border_style.gradient_colors
+            # Textual/Rich gradient syntax
+            return f"[{color1} on default to {color2} on default]{border_text}[/]"
+        else:
+            # Use solid color fallback
+            return f"[{self.border_style.border_color}]{border_text}[/]"
 
     def _show_help_dialog(self) -> None:
         """Push the help dialog onto the screen stack."""
@@ -411,7 +455,7 @@ class MainScreen(Screen):
         self.preferences = load_preferences()           # Load user preferences from disk
         self.selected_index = self.preferences.last_selected_mood_index # Restore last selected mood
         self.show_history = self.preferences.show_history_panel
-    
+
         self.theme_names = list(THEMES.keys())          # Set up theme system using saved preference
         try:
             self.theme_index = self.theme_names.index(self.preferences.current_theme)
@@ -419,7 +463,8 @@ class MainScreen(Screen):
             self.theme_index = self.theme_names.index(DEFAULT_THEME_NAME)         # If saved theme doesn't exist, fall back to default
 
         self.palette = get_palette(self.theme_names[self.theme_index])
-        self.render_view()
+        self.border_style = get_border_style(self.theme_names[self.theme_index])  # MOVED UP!
+        self.render_view()  # Now this is safe because border_style exists
 
     async def on_key(self, event: events.Key) -> None:
         """Handle keyboard input for navigation and actions."""
@@ -460,27 +505,39 @@ class MainScreen(Screen):
     def render_view(self) -> None:
         """Rebuild the full UI by composing all sections together."""
         padding = self._get_centered_padding()
-    
+
         lines = []
-        lines.append(self._apply_padding(self._colorize(MOOD_TRACKER_HEADER), padding))
-    
+        
+        # Generate and apply top border dynamically from current theme
+        top_border = self._create_top_border()
+        lines.append(self._apply_padding(self._apply_border_color(top_border), padding))
+
+        # Render mood selection section
         for content, style in self._build_mood_section_lines():
             lines.append(self._wrap_in_box(content, style, padding))
-    
-        lines.append(self._apply_padding(self._colorize(MOOD_HISTORY_DIVIDER), padding))
-    
+
+        # Generate and apply section divider dynamically
+        divider = self._create_section_divider("Mood History")
+        lines.append(self._apply_padding(self._apply_border_color(divider), padding))
+
+        # Render history section if enabled
         if self.show_history:
             for content, style in self._build_history_section_lines():
                 lines.append(self._wrap_in_box(content, style, padding))
-    
-        lines.append(self._apply_padding(self._colorize(BOX_BOTTOM), padding))
-    
+
+        # Generate and apply bottom border dynamically
+        bottom_border = self._create_bottom_border()
+        lines.append(self._apply_padding(self._apply_border_color(bottom_border), padding))
+
         self.main_view.update("\n".join(lines))
 
     def _wrap_in_box(self, content: str, style: str | None = None, padding: int = 0) -> str:
+        """Wrap content in themed vertical borders."""
         padded_content = content.ljust(INNER_WIDTH)
-        line = f"│{padded_content}│"
-        colored_line = self._colorize(line, style)  # Pass style as second argument
+        # Use the current theme's vertical border character
+        vertical = self.border_style.vertical
+        line = f"{vertical}{padded_content}{vertical}"
+        colored_line = self._colorize(line, style)
         return self._apply_padding(colored_line, padding)
 
     def _colorize(self, line: str, style: str | None = None) -> str:
@@ -604,10 +661,10 @@ class MainScreen(Screen):
     def _cycle_theme(self) -> None:
         """Cycle through available themes and update the UI."""
         self.theme_index = (self.theme_index + 1) % len(self.theme_names)
-        self.palette = get_palette(self.theme_names[self.theme_index])
+        self.palette = get_palette(self.theme_names[self.theme_index])            
+        self.border_style = get_border_style(self.theme_names[self.theme_index])  # Add this line
         self.preferences.current_theme = self.theme_names[self.theme_index]
         save_preferences(self.preferences)
-
         self.render_view()
 
     def _current_theme_name(self) -> str:

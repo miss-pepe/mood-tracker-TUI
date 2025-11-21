@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict
 
@@ -13,7 +14,29 @@ class ColorPalette:
     danger: str
     success: str
 
-DEFAULT_THEME_NAME = "midnight"
+@dataclass
+class BorderStyle:
+    # Corner characters
+    top_left: str
+    top_right: str
+    bottom_left: str
+    bottom_right: str
+    
+    # Edge characters
+    horizontal: str
+    vertical: str
+    
+    # Divider characters (for section separators)
+    divider_left: str
+    divider_right: str
+    divider_horizontal: str
+    
+    # Color specification (can be solid or gradient)
+    border_color: str
+    use_gradient: bool = False
+    gradient_colors: tuple[str, str] | None = None
+
+DEFAULT_THEME_NAME = "Horizon_Dark"
 
 # A few curated palettes to let users pick a vibe.
 THEMES: Dict[str, ColorPalette] = {
@@ -602,6 +625,253 @@ THEMES: Dict[str, ColorPalette] = {
     ),
 }
 
+# Border styles for each theme
+# Each theme's borders express its unique personality through character choice and color
+BORDER_STYLES: Dict[str, BorderStyle] = {
+    # ============================================================================
+    # CYBERPUNK & HIGH-TECH THEMES
+    # Bold, aggressive, neon colors with heavy or double-line borders
+    # ============================================================================
+    
+    "neon_midnight": BorderStyle(
+        # Heavy borders for aggressive, high-energy cyberpunk feel
+        top_left="┏", top_right="┓", bottom_left="┗", bottom_right="┛",
+        horizontal="━", vertical="┃",
+        divider_left="┣", divider_right="┫", divider_horizontal="━",
+        border_color="#39ff14",  # Neon green fallback
+        use_gradient=True,
+        gradient_colors=("#39ff14", "#00efff"),  # Green to cyan - classic neon
+    ),
+    
+    "neon_anxiety": BorderStyle(
+        # Mixed heavy and light for visual tension and jittery energy
+        top_left="┏", top_right="┓", bottom_left="┗", bottom_right="┛",
+        horizontal="━", vertical="┃",
+        divider_left="┣", divider_right="┫", divider_horizontal="━",
+        border_color="#ff499e",  # Hot pink fallback
+        use_gradient=True,
+        gradient_colors=("#ff499e", "#9d57ff"),  # Pink to purple - anxious energy
+    ),
+    
+    "chaotic_intelligence_matrix": BorderStyle(
+        # Double-line for that computer terminal, matrix-like aesthetic
+        top_left="╔", top_right="╗", bottom_left="╚", bottom_right="╝",
+        horizontal="═", vertical="║",
+        divider_left="╠", divider_right="╣", divider_horizontal="═",
+        border_color="#00f0ff",  # Cyan fallback
+        use_gradient=True,
+        gradient_colors=("#00f0ff", "#a6ff00"),  # Cyan to green - digital matrix
+    ),
+    
+    "feral_cyberpunk_assistant": BorderStyle(
+        # Heavy borders with wild gradient transitions
+        top_left="┏", top_right="┓", bottom_left="┗", bottom_right="┛",
+        horizontal="━", vertical="┃",
+        divider_left="┣", divider_right="┫", divider_horizontal="━",
+        border_color="#ff47a3",  # Hot pink fallback
+        use_gradient=True,
+        gradient_colors=("#ff47a3", "#37c0ff"),  # Pink to cyan - wild energy
+    ),
+    
+    "cyber_siren": BorderStyle(
+        # Heavy borders with seductive gradient
+        top_left="┏", top_right="┓", bottom_left="┗", bottom_right="┛",
+        horizontal="━", vertical="┃",
+        divider_left="┣", divider_right="┫", divider_horizontal="━",
+        border_color="#ff5ea9",  # Hot pink fallback
+        use_gradient=True,
+        gradient_colors=("#ff5ea9", "#00f0c6"),  # Pink to teal - alluring
+    ),
+    
+    # ============================================================================
+    # COZY & WARM THEMES
+    # Rounded corners, soft colors, gentle and approachable
+    # ============================================================================
+    
+    "catppuccin_mocha": BorderStyle(
+        # Rounded corners for cozy, coffee-shop warmth
+        top_left="╭", top_right="╮", bottom_left="╰", bottom_right="╯",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#f5c2e7",  # Soft pink - warm and inviting
+        use_gradient=False,
+    ),
+    
+    "afterglow": BorderStyle(
+        # Rounded corners with sunset warmth
+        top_left="╭", top_right="╮", bottom_left="╰", bottom_right="╯",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#7cafc2",  # Soft blue fallback
+        use_gradient=True,
+        gradient_colors=("#ba8baf", "#7cafc2"),  # Purple to blue - sunset glow
+    ),
+    
+    "midnight_bubblegum": BorderStyle(
+        # Rounded with playful gradient
+        top_left="╭", top_right="╮", bottom_left="╰", bottom_right="╯",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#ff7bc3",  # Bubblegum pink fallback
+        use_gradient=True,
+        gradient_colors=("#ff7bc3", "#9affe2"),  # Pink to mint - sweet and fun
+    ),
+    
+    # ============================================================================
+    # RETRO & ARCADE THEMES
+    # Double-line borders, chunky aesthetic, nostalgic color gradients
+    # ============================================================================
+    
+    "retro_arcade_crt": BorderStyle(
+        # Double-line for chunky retro computer feel
+        top_left="╔", top_right="╗", bottom_left="╚", bottom_right="╝",
+        horizontal="═", vertical="║",
+        divider_left="╠", divider_right="╣", divider_horizontal="═",
+        border_color="#ffce28",  # Arcade yellow fallback
+        use_gradient=True,
+        gradient_colors=("#56ff7f", "#ffce28"),  # Green to yellow - classic arcade
+    ),
+    
+    "synthwave_84": BorderStyle(
+        # Double-line with that iconic synthwave gradient
+        top_left="╔", top_right="╗", bottom_left="╚", bottom_right="╝",
+        horizontal="═", vertical="║",
+        divider_left="╠", divider_right="╣", divider_horizontal="═",
+        border_color="#ff4971",  # Hot pink fallback
+        use_gradient=True,
+        gradient_colors=("#ff4971", "#9aedfe"),  # Pink to cyan - pure synthwave
+    ),
+    
+    "nineties_vapor_arcade": BorderStyle(
+        # Double-line with 90s color palette
+        top_left="╔", top_right="╗", bottom_left="╚", bottom_right="╝",
+        horizontal="═", vertical="║",
+        divider_left="╠", divider_right="╣", divider_horizontal="═",
+        border_color="#7bffda",  # Teal fallback
+        use_gradient=True,
+        gradient_colors=("#7bffda", "#b399ff"),  # Teal to purple - 90s aesthetic
+    ),
+    
+    "tomorrow_night_eighties": BorderStyle(
+        # Double-line with 80s color warmth
+        top_left="╔", top_right="╗", bottom_left="╚", bottom_right="╝",
+        horizontal="═", vertical="║",
+        divider_left="╠", divider_right="╣", divider_horizontal="═",
+        border_color="#6699cc",  # Blue fallback
+        use_gradient=False,  # Solid for that clean 80s monitor look
+    ),
+    
+    # ============================================================================
+    # PROFESSIONAL & CLEAN THEMES
+    # Standard single-line, subtle colors, focus on clarity
+    # ============================================================================
+    
+    "dracula": BorderStyle(
+        # Standard borders with Dracula's signature purple
+        top_left="┌", top_right="┐", bottom_left="└", bottom_right="┘",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#bd93f9",  # Classic Dracula purple
+        use_gradient=False,
+    ),
+    
+    "one_dark_pro": BorderStyle(
+        # Clean single-line with subtle blue
+        top_left="┌", top_right="┐", bottom_left="└", bottom_right="┘",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#61afef",  # One Dark blue
+        use_gradient=False,
+    ),
+    
+    "nord": BorderStyle(
+        # Clean single-line with Nord's cool blue
+        top_left="┌", top_right="┐", bottom_left="└", bottom_right="┘",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#81a1c1",  # Nord blue - cool and professional
+        use_gradient=False,
+    ),
+    
+    "gruvbox_dark": BorderStyle(
+        # Standard borders with Gruvbox's warm orange
+        top_left="┌", top_right="┐", bottom_left="└", bottom_right="┘",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#d79921",  # Gruvbox yellow-orange - earthy
+        use_gradient=False,
+    ),
+    
+    # ============================================================================
+    # MYSTICAL & MAGICAL THEMES
+    # Mixed borders or unique character choices for mysterious feel
+    # ============================================================================
+    
+    "storm_witch": BorderStyle(
+        # Heavy borders with electric gradient
+        top_left="┏", top_right="┓", bottom_left="┗", bottom_right="┛",
+        horizontal="━", vertical="┃",
+        divider_left="┣", divider_right="┫", divider_horizontal="━",
+        border_color="#64a8ff",  # Electric blue fallback
+        use_gradient=True,
+        gradient_colors=("#64a8ff", "#8e7cff"),  # Blue to purple - storm energy
+    ),
+    
+    "cyber_swamp_witch": BorderStyle(
+        # Mixed heavy and light for mystical asymmetry
+        top_left="┏", top_right="┐", bottom_left="└", bottom_right="┛",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┫", divider_horizontal="─",
+        border_color="#8c52ff",  # Purple fallback
+        use_gradient=True,
+        gradient_colors=("#8c52ff", "#42ff66"),  # Purple to green - swamp magic
+    ),
+    
+    "terminal_witchcraft": BorderStyle(
+        # Standard with magical green gradient
+        top_left="┌", top_right="┐", bottom_left="└", bottom_right="┘",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#4eff7a",  # Bright green fallback
+        use_gradient=True,
+        gradient_colors=("#4eff7a", "#40a7ff"),  # Green to blue - magic energy
+    ),
+    
+    # ============================================================================
+    # PLAYFUL & FUN THEMES
+    # Rounded or standard borders with bright, cheerful gradients
+    # ============================================================================
+    
+    "galaxy_sweetheart": BorderStyle(
+        # Rounded with dreamy gradient
+        top_left="╭", top_right="╮", bottom_left="╰", bottom_right="╯",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#ff7edb",  # Pink fallback
+        use_gradient=True,
+        gradient_colors=("#ff7edb", "#78cfff"),  # Pink to blue - dreamy space
+    ),
+    
+    "hacker_bunny": BorderStyle(
+        # Rounded for cute, approachable hacker
+        top_left="╭", top_right="╮", bottom_left="╰", bottom_right="╯",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#ffa1d5",  # Soft pink fallback
+        use_gradient=True,
+        gradient_colors=("#ffa1d5", "#75e8ff"),  # Pink to cyan - playful tech
+    ),
+    
+    "adventure_time": BorderStyle(
+        # Standard with adventurous gradient
+        top_left="┌", top_right="┐", bottom_left="└", bottom_right="┘",
+        horizontal="─", vertical="│",
+        divider_left="├", divider_right="┤", divider_horizontal="─",
+        border_color="#6ca0ff",  # Blue fallback
+        use_gradient=True,
+        gradient_colors=("#6ca0ff", "#c77dff"),  # Blue to purple - adventure!
+    ),
+}
 
 def get_palette(name: str) -> ColorPalette:
     """Return a palette by name, raising a helpful error when missing."""
@@ -610,3 +880,38 @@ def get_palette(name: str) -> ColorPalette:
         return THEMES[name]
     except KeyError as exc:  # pragma: no cover - simple guardrail
         raise ValueError(f"Unknown theme '{name}'. Available: {', '.join(THEMES)}") from exc
+
+def get_border_style(name: str) -> BorderStyle:
+    """Return a border style by name, with a fallback to default if not found.
+    
+    This function ensures that every theme has border styles, even if we haven't
+    explicitly designed borders for that theme yet. It falls back to simple
+    single-line borders with the theme's accent color.
+    
+    Args:
+        name: The theme name to look up (e.g., "midnight", "dracula")
+        
+    Returns:
+        BorderStyle object containing all border characters and colors
+    """
+    if name in BORDER_STYLES:
+        return BORDER_STYLES[name]
+    
+    # Fallback: create a basic border style using the theme's colors
+    # This ensures themes without custom borders still look good
+    palette = get_palette(name)
+    return BorderStyle(
+        # Standard single-line box-drawing characters
+        top_left="┌",
+        top_right="┐",
+        bottom_left="└",
+        bottom_right="┘",
+        horizontal="─",
+        vertical="│",
+        divider_left="├",
+        divider_right="┤",
+        divider_horizontal="─",
+        # Use the theme's accent color for visual cohesion
+        border_color=palette.accent_mid,
+        use_gradient=False,
+    )
