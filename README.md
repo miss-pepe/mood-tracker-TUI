@@ -27,6 +27,7 @@ A small Textual-powered terminal app to log how you're feeling, add optional tag
 - `n` — Focus the rating field to log a new mood.
 - `g` — Open the trends/history view.
 - `q` — Quit the app.
+- `t` — Cycle through the available themes (midnight, sunrise, forest).
 - On the trends screen: `b` to go back, `r` to refresh data.
 
 ## Data location
