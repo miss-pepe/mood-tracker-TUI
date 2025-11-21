@@ -1,0 +1,48 @@
+/* Styling for the export modal */
+
+#export-modal {
+    align: center middle;
+    width: 70;
+    height: auto;
+    padding: 2;
+    border: thick;
+    background: $background;
+}
+
+#export-title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#export-prompt {
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#format-descriptions {
+    margin-bottom: 1;
+    color: $text-muted;
+}
+
+#format-buttons {
+    align: center middle;
+    width: 100%;
+    height: auto;
+    margin-bottom: 1;
+}
+
+#format-buttons Button {
+    margin: 0 1;
+}
+
+#export-modal > Button {
+    width: 30;
+    margin: 0;
+}
+
+#export-status {
+    text-align: center;
+    margin-top: 1;
+    min-height: 1;
+}

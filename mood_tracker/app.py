@@ -10,11 +10,12 @@ class MoodTrackerApp(App):
 
     TITLE = "Mood Tracker TUI"
     SUB_TITLE = "Track your vibes in the terminal"
-    CSS_PATH = None
+    # Load CSS from multiple files to keep styling organized
+    CSS_PATH = [
+    "views/reflection.tcss",
+    "views/export.tcss",
+]
 
-    BINDINGS = [
-        ("q", "quit", "Quit"),
-    ]
 
     def on_mount(self) -> None:
         """Run when the app starts."""

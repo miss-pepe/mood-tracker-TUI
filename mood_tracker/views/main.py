@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+
+from .reflection import ReflectionPromptScreen
+
+from .export import ExportScreen
+
+
 from datetime import date, datetime
 
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Static
+from textual.widgets import Static, TextArea
 from textual import events
 
 from ..models.storage import load_moods, save_moods, MoodEntry
@@ -337,6 +343,45 @@ def display_theme_mascot(theme_name):           # Example of how to display a ma
 from textual.widgets import Static, Label
 from textual.containers import Container, Vertical
 
+class ReflectionPromptScreen(Screen):
+    """Modal dialog for users to add a note/reflection to their mood entry."""
+    
+    BINDINGS = [
+        ("escape", "cancel", "Cancel"),
+        ("ctrl+s", "submit", "Save"),
+    ]
+    
+    def __init__(self, label: str, score: int, palette):
+        super().__init__()
+        self.label = label
+        self.score = score
+        self.palette = palette
+        self.note_text = ""
+    
+    def compose(self) -> ComposeResult:
+        from textual.widgets import TextArea, Button
+        with Container(id="reflection-dialog"):
+            yield Static(f"Add a reflection for: {self.label}", id="reflection-header")
+            yield TextArea(id="reflection-input")
+            with Container(id="reflection-buttons"):
+                yield Button("Save (Ctrl+S)", id="save-button", variant="primary")
+                yield Button("Skip (ESC)", id="cancel-button")
+    
+    def on_mount(self) -> None:
+        text_area = self.query_one("#reflection-input", TextArea)
+        text_area.focus()
+    
+    def action_submit(self) -> None:
+        """Save the mood with the reflection note."""
+        text_area = self.query_one("#reflection-input", TextArea)
+        self.note_text = text_area.text.strip() if text_area.text else None
+        self.dismiss(self.note_text)
+    
+    def action_cancel(self) -> None:
+        """Cancel without saving a note."""
+        self.dismiss(None)
+
+
 class HelpScreen(Screen):
     """Modal dialog showing keyboard shortcuts and help information."""
     
@@ -469,9 +514,8 @@ class MainScreen(Screen):
     async def on_key(self, event: events.Key) -> None:
         """Handle keyboard input for navigation and actions."""
         key = event.key.lower()
-    
-                        # Navigation keys
-        if key in ("up", "k"):
+
+        if key in ("up", "k"):                        # Navigation keys
             self.selected_index = (self.selected_index - 1) % len(MOOD_OPTIONS)
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
@@ -487,7 +531,8 @@ class MainScreen(Screen):
         elif key == "enter" or key == "s":  # Enter or S to save
             self._save_current_mood()
             self.render_view()
-    
+            await self._save_current_mood()
+
         elif key == "t":        # Toggle theme
             self._cycle_theme()
     
@@ -499,6 +544,9 @@ class MainScreen(Screen):
     
         elif key == "question_mark":  # ? for help
             self._show_help_dialog()
+
+        elif key == "e":  # E for export
+            self.app.push_screen(ExportScreen(self.palette))
 
     # ---------------- Rendering helpers ----------------
 
@@ -584,34 +632,52 @@ class MainScreen(Screen):
         return lines
 
     def _build_history_section_lines(self) -> list[tuple[str, str | None]]:
-        """Build the lines for the bottom 'Mood History' section."""
+        """Build the lines for the bottom 'Mood History' section.
+        
+        The key here is to keep the content and styling separate so that
+        width calculations work correctly. We build plain text content first,
+        let it get padded to the right width, and then the _wrap_in_box
+        method handles applying colors uniformly.
+        """
+
         entries = load_moods()
 
         if not entries:
             return [
-            ("", None),
-            ("No mood history yet. Log something above to get started.",
-             f"dim {self.palette.text_muted}"),
-            ("", None),
-            ("              lower ←──────────── mood →────────────→ higher",
-             self.palette.accent_low),
-            ("", None),
-        ]
+                ("", None),
+                ("No mood history yet. Log something above to get started.",
+                 f"dim {self.palette.text_muted}"),
+                ("", None),
+                ("              lower ←──────────── mood →────────────→ higher",
+                 self.palette.accent_low),
+                ("", None),
+            ]
 
         last_entries = entries[-5:]
-    
-        max_score = max(entry.score for entry in last_entries)    # Find max score for scaling
+        max_score = max(entry.score for entry in last_entries)
 
         lines: list[tuple[str, str | None]] = []
+        
         for entry in last_entries:
             date_str = entry.timestamp.strftime("%m-%d")
             ascii_face = self._ascii_for_score(entry.score)
+            bar_length = self._calculate_scaled_bar_length(
+                entry.score, max_score, max_bar_width=30
+            )
+            
+            # Build the bar as plain text first - no color tags yet
+            bar = "█" * bar_length
+            
+            # Create the complete line content as plain text
+            # This ensures width calculations are accurate
+            line_text = f"{date_str}: {ascii_face:<4} {bar}"
+            
+            # Determine the color for the bar based on score
             bar_color = self._bar_color_for_score(entry.score)
-            bar_length = self._calculate_scaled_bar_length(entry.score, max_score, max_bar_width=30)        # Use scaled bar length
-            bar = "█" * bar_length          # Using a solid block character for better visual weight
-        
-            line_text = f"{date_str}: {ascii_face:<4} [{bar_color}]{bar}[/{bar_color}]"
-            lines.append((line_text, self.palette.text_primary))
+            
+            # Now we can append with the color as the style parameter
+            # The _wrap_in_box method will apply this color to the whole line
+            lines.append((line_text, bar_color))
 
         while len(lines) < 5:
             lines.append(("", None))
@@ -619,11 +685,13 @@ class MainScreen(Screen):
         lines.append(("", None))
         lines.append(
             ("              lower ←──────────── mood →────────────→ higher",
-            self.palette.accent_low)
+             self.palette.accent_low)
         )
         lines.append(("", None))
 
         return lines
+
+
 
     def _bar_color_for_score(self, score: int) -> str:
         """Return the specific bar color for a mood score."""
@@ -670,27 +738,57 @@ class MainScreen(Screen):
     def _current_theme_name(self) -> str:
         return self.theme_names[self.theme_index]
 
-    def _save_current_mood(self) -> None:
+    async def _save_current_mood(self) -> None:
+        """Save the currently selected mood, optionally with a reflection note.
+    
+        This method now follows a two-step process:
+        1. Show the reflection prompt and wait for user input
+        2. Save the mood with whatever note they provided (or None)
+    
+        The async/await pattern here is what makes the modal dialog work.
+        We pause execution, show the reflection screen, and only continue
+        once the user has made their choice.
+        """
         label, score = MOOD_OPTIONS[self.selected_index]
+        # Show the reflection prompt and wait for the result
+        # The result will be either a note string or None
+        note_text = await self.app.push_screen_wait(
+            ReflectionPromptScreen(label, score, self.palette)
+        )
+
+        # Now we have all the information we need to create the entry
         entries = load_moods()
         entries.append(
             MoodEntry(
                 timestamp=datetime.now(),
                 score=score,
-                tag=None,
-                note=label,
+                tag=None,  # We're not using tags yet, but the field is ready
+                note=note_text,  # This is now the user's reflection
             )
         )
         save_moods(entries)
 
-        self.preferences.last_selected_mood_index = self.selected_index       # Save preferences
+        # Save preferences so the selected mood persists
+        self.preferences.last_selected_mood_index = self.selected_index
         save_preferences(self.preferences)
 
-        self.app.notify(        # Show confirmation toast
-            f"✓ Mood saved: {label}",
-            severity="information",
-            timeout=2
-        )
+        # Show confirmation feedback to the user
+        # The message changes based on whether they added a note
+        if note_text:
+            self.app.notify(
+                f"✓ Mood saved: {label} (with note)",
+                severity="information",
+                timeout=2
+            )
+        else:
+            self.app.notify(
+                f"✓ Mood saved: {label}",
+                severity="information",
+                timeout=2
+            )
+
+        # Refresh the display to show the new entry in history
+        self.render_view()
 
     def _calculate_scaled_bar_length(self, score: int, max_score: int, max_bar_width: int = 20) -> int:
         """Calculate bar length scaled relative to the maximum score in history."""

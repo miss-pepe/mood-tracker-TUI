@@ -1,0 +1,46 @@
+/* Styling for the reflection prompt modal */
+
+#reflection-modal {
+    /* Center the modal in the middle of the screen */
+    align: center middle;
+    /* Give it defined dimensions so it doesn't stretch too much */
+    width: 60;
+    height: auto;
+    /* Add some padding inside the box for breathing room */
+    padding: 2;
+    /* Visual styling to make it look like a floating dialog */
+    border: thick;
+    background: $background;
+}
+
+#mood-confirmation {
+    /* Make the mood confirmation prominent and centered */
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#reflection-prompt {
+    /* The prompt text should be gentler and centered */
+    text-align: center;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#note-input {
+    /* Give the input field some space to breathe */
+    margin-bottom: 1;
+    width: 100%;
+}
+
+#button-row {
+    /* Center the buttons horizontally */
+    align: center middle;
+    width: 100%;
+    height: auto;
+}
+
+#button-row Button {
+    /* Add some spacing between the buttons */
+    margin: 0 1;
+}
