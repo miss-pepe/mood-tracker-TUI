@@ -153,7 +153,7 @@ class MainScreen(Screen):
             bar_length = max(1, entry.score * 2)
             bar = "#" * bar_length
             # Example: "11-20: 😐  ################"
-        lines.append(
+            lines.append(
                 (
                     f"{date_str}: {emoji}  {bar}",
                     self._history_color_for_score(entry.score),
