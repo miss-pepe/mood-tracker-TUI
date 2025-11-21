@@ -7,11 +7,10 @@ from textual.screen import Screen
 from textual.widgets import Static
 from textual import events
 
-from app.models.mood import MoodEntry
-from app.storage.json_storage import load_moods, save_moods
+from ..models.storage import load_moods, save_moods, MoodEntry
 
 
-# ASCII box pieces – these are sized to match your mockup
+# ASCII box pieces – sized to match your mockup
 BOX_TOP = "┌───────────────────────────── MOOD TRACKER ─────────────────────────────┐"
 BOX_BOTTOM = "└───────────────────────────────────────────────────────────────────────┘"
 SECTION_DIVIDER = "├──────────────────────────── Mood History ─────────────────────────────┤"
@@ -19,9 +18,9 @@ SECTION_DIVIDER = "├───────────────────�
 INNER_WIDTH = len(BOX_TOP) - 2  # number of characters between the vertical borders
 
 
-# Mood options as (label_for_ui, numeric_rating_to_save)
+# Mood options as (label_for_ui, numeric_score_to_save)
 MOOD_OPTIONS = [
-    ("😄  Great", 9),  # map to rating field on MoodEntry
+    ("😄  Great", 9),
     ("🙂  Good", 7),
     ("😐  Meh", 5),
     ("😞  Bad", 3),
@@ -41,24 +40,24 @@ class MainScreen(Screen):
         # Start with the middle option selected ("Meh")
         self.selected_index = 2
         # Render initial view
-        self._render()
+        self.render_view()
 
     async def on_key(self, event: events.Key) -> None:
         """Handle ↑/↓ to change selection, Enter to save."""
         if event.key in ("up", "k"):
             self.selected_index = (self.selected_index - 1) % len(MOOD_OPTIONS)
-            self._render()
+            self.render_view()
         elif event.key in ("down", "j"):
             self.selected_index = (self.selected_index + 1) % len(MOOD_OPTIONS)
-            self._render()
+            self.render_view()
         elif event.key == "enter":
             # Save the currently selected mood
             self._save_current_mood()
-            self._render()
+            self.render_view()
 
     # ----------------- Rendering helpers -----------------
 
-    def _render(self) -> None:
+    def render_view(self) -> None:
         """Rebuild the full ASCII box and update the Static."""
         mood_lines = self._build_mood_section_lines()
         history_lines = self._build_history_section_lines()
@@ -101,7 +100,7 @@ class MainScreen(Screen):
         # Mood options like:
         #   ( ) 😄  Great
         #   (x) 😐  Meh
-        for idx, (label, _rating) in enumerate(MOOD_OPTIONS):
+        for idx, (label, _score) in enumerate(MOOD_OPTIONS):
             marker = "(x)" if idx == self.selected_index else "( )"
             lines.append(f"  {marker} {label}")
 
@@ -130,9 +129,9 @@ class MainScreen(Screen):
         lines: list[str] = []
         for entry in last_entries:
             date_str = entry.timestamp.strftime("%m-%d")
-            emoji = self._emoji_for_rating(entry.rating)
+            emoji = self._emoji_for_score(entry.score)
             # Scale bar length – tweak factor to taste
-            bar_length = max(1, entry.rating * 2)
+            bar_length = max(1, entry.score * 2)
             bar = "#" * bar_length
             # Example: "11-20: 😐  ################"
             lines.append(f"{date_str}: {emoji}  {bar}")
@@ -147,15 +146,15 @@ class MainScreen(Screen):
 
         return lines
 
-    def _emoji_for_rating(self, rating: int) -> str:
-        """Pick an emoji matching the saved numeric rating."""
-        if rating >= 9:
+    def _emoji_for_score(self, score: int) -> str:
+        """Pick an emoji matching the saved numeric score."""
+        if score >= 9:
             return "😄"
-        if rating >= 7:
+        if score >= 7:
             return "🙂"
-        if rating >= 5:
+        if score >= 5:
             return "😐"
-        if rating >= 3:
+        if score >= 3:
             return "😞"
         return "😭"
 
@@ -163,16 +162,14 @@ class MainScreen(Screen):
 
     def _save_current_mood(self) -> None:
         """Create a MoodEntry for the selected mood and persist it."""
-        label, rating = MOOD_OPTIONS[self.selected_index]
+        label, score = MOOD_OPTIONS[self.selected_index]
         entries = load_moods()
         entries.append(
             MoodEntry(
                 timestamp=datetime.now(),
-                rating=rating,
+                score=score,
                 tag=None,
                 note=label,  # stash label in note so you can see it later if needed
             )
         )
         save_moods(entries)
-        # subtle feedback: you could add a temporary message, but the updated
-        # history section is already a visual confirmation
