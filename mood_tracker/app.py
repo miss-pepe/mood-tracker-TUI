@@ -10,10 +10,11 @@ class MoodTrackerApp(App):
 
     TITLE = "Mood Tracker TUI"
     SUB_TITLE = "Track your vibes in the terminal"
-    # Load CSS from multiple files to keep styling organized
+    
     CSS_PATH = [
     "views/reflection.tcss",
     "views/export.tcss",
+    "views/calendar.tcss",
 ]
 
 

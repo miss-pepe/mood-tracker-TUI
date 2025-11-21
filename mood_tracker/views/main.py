@@ -1,21 +1,19 @@
 from __future__ import annotations
-
-
 from .reflection import ReflectionPromptScreen
-
 from .export import ExportScreen
-
-
 from datetime import date, datetime
-
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Static, TextArea
 from textual import events
-
 from ..models.storage import load_moods, save_moods, MoodEntry
 from ..theme import DEFAULT_THEME_NAME, THEMES, get_palette, get_border_style
 from ..models.preferences import load_preferences, save_preferences, UserPreferences
+from .calendar import MonthlyCalendarScreen
+from ..audio import SoundManager
+
+
+
 
 BOX_WIDTH = 74                      # ASCII box pieces
 INNER_WIDTH = BOX_WIDTH - 2
@@ -500,6 +498,8 @@ class MainScreen(Screen):
         self.preferences = load_preferences()           # Load user preferences from disk
         self.selected_index = self.preferences.last_selected_mood_index # Restore last selected mood
         self.show_history = self.preferences.show_history_panel
+        self.sound_manager = SoundManager()
+
 
         self.theme_names = list(THEMES.keys())          # Set up theme system using saved preference
         try:
@@ -519,12 +519,14 @@ class MainScreen(Screen):
             self.selected_index = (self.selected_index - 1) % len(MOOD_OPTIONS)
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
+            self.sound_manager.play_selection()  # Add this line
             self.render_view()
     
         elif key in ("down", "j"):
             self.selected_index = (self.selected_index + 1) % len(MOOD_OPTIONS)
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
+            self.sound_manager.play_selection()  # Add this line
             self.render_view()
     
                         # Action keys
@@ -547,6 +549,9 @@ class MainScreen(Screen):
 
         elif key == "e":  # E for export
             self.app.push_screen(ExportScreen(self.palette))
+
+        elif key == "m":  # M for monthly view
+            self.app.push_screen(MonthlyCalendarScreen(self.palette, self.border_style))
 
     # ---------------- Rendering helpers ----------------
 
@@ -767,6 +772,8 @@ class MainScreen(Screen):
             )
         )
         save_moods(entries)
+        self.sound_manager.play_save()  # Add this line
+
 
         # Save preferences so the selected mood persists
         self.preferences.last_selected_mood_index = self.selected_index

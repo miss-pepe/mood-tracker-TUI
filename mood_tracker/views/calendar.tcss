@@ -1,0 +1,26 @@
+/* Styling for the monthly calendar view */
+
+#calendar-container {
+    /* Center the calendar on the screen */
+    align: center middle;
+    width: 50;
+    height: auto;
+    padding: 2;
+    /* Give it a visible border using the theme */
+    border: thick;
+    background: $background;
+}
+
+#calendar-display {
+    /* The calendar grid itself */
+    width: 100%;
+    height: auto;
+    text-align: center;
+}
+
+#calendar-help {
+    /* Help text at the bottom showing navigation keys */
+    margin-top: 1;
+    text-align: center;
+    color: $text-muted;
+}
