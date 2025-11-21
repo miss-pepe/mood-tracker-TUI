@@ -45,7 +45,7 @@ class MainScreen(Screen):
 
     #form_actions {
         padding: 1 0 0 0;
-        column-gap: 1;
+        column-span: 1;
     }
 
     #recent_section {
