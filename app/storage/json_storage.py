@@ -21,10 +21,21 @@ def load_moods() -> List[MoodEntry]:
     try:
         with DATA_FILE.open("r", encoding="utf-8") as f:
             raw = json.load(f)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, OSError):
         return []
 
-    return [MoodEntry.from_dict(item) for item in raw]
+    if not isinstance(raw, list):
+        return []
+
+    entries: list[MoodEntry] = []
+    for item in raw:
+        try:
+            entries.append(MoodEntry.from_dict(item))
+        except (KeyError, TypeError, ValueError):
+            # Skip malformed rows instead of crashing the app
+            continue
+
+    return entries
 
 
 def save_moods(entries: List[MoodEntry]) -> None:

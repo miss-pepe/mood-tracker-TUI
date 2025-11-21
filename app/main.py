@@ -13,7 +13,7 @@ class MoodTrackerApp(App):
     """Root Textual application for the Mood Tracker."""
 
     TITLE = "Mood Tracker TUI"
-    SUB_TITLE = "v0.2 - Now with actual feelings"
+    SUB_TITLE = "Log moods, view trends, stay mindful"
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
