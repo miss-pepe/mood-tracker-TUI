@@ -1,1 +1,1 @@
-# mood-tracker-TUI
+# Terminal Mood Tracker App 
