@@ -15,6 +15,7 @@ from textual.widgets import (
 from textual.containers import Vertical, Horizontal
 
 from app.models.mood import MoodEntry
+from app.ui.graph_screen import GraphScreen
 
 
 class MainScreen(Screen):
@@ -23,7 +24,51 @@ class MainScreen(Screen):
     BINDINGS = [
         ("q", "quit", "Quit app"),
         ("n", "focus_rating", "New mood"),
+        ("g", "show_graph", "Trends & history"),
     ]
+
+    DEFAULT_CSS = """
+    #top_section, #form_section, #recent_section {
+        padding: 1 2;
+    }
+
+    #form_section {
+        border: round $secondary;
+        width: 100%;
+        max-width: 70;
+        background: $panel;
+    }
+
+    #form_section Input {
+        width: 34;
+    }
+
+    #form_actions {
+        padding: 1 0 0 0;
+        column-gap: 1;
+    }
+
+    #recent_section {
+        border: round $primary;
+        background: $boost;
+        width: 100%;
+        max-width: 70;
+    }
+
+    #recent_moods {
+        padding: 0 0 1 0;
+        color: $text-muted;
+    }
+
+    #status {
+        height: 1;
+        color: $success;
+    }
+
+    #status.error {
+        color: $error;
+    }
+    """
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the screen."""
@@ -33,8 +78,8 @@ class MainScreen(Screen):
         yield Vertical(
             Static("🧠 Mood Tracker TUI", id="title"),
             Static(
-                "Log your mood and see recent entries.\n"
-                "Hotkeys: [n] new mood, [q] quit.",
+                "Log your mood, then view trends and history.\n"
+                "Hotkeys: [n] new mood, [g] trends, [q] quit.",
                 id="subtitle",
             ),
             id="top_section",
@@ -58,7 +103,12 @@ class MainScreen(Screen):
                 Input(placeholder="Short note about today", id="input_note"),
                 id="row_note",
             ),
-            Button("Save mood", id="btn_save"),
+            Horizontal(
+                Button("Save mood", id="btn_save"),
+                Button("View trends & history", id="btn_history"),
+                id="form_actions",
+            ),
+            Static("", id="status"),
             id="form_section",
         )
 
@@ -116,10 +166,16 @@ class MainScreen(Screen):
         rating_input.focus()
         rating_input.value = ""
 
+    def action_show_graph(self) -> None:
+        """Navigate to the graph / history screen."""
+        self.app.push_screen(GraphScreen())  # type: ignore[attr-defined]
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press events."""
         if event.button.id == "btn_save":
             self._handle_save()
+        elif event.button.id == "btn_history":
+            self.action_show_graph()
 
     def _handle_save(self) -> None:
         """Validate form inputs and save the new mood."""
@@ -132,12 +188,14 @@ class MainScreen(Screen):
         if not raw_rating.isdigit():
             rating_input.tooltip = "Rating must be a number between 1 and 10."
             rating_input.focus()
+            self._set_status("Rating must be a number between 1 and 10.", error=True)
             return
 
         rating = int(raw_rating)
         if not (1 <= rating <= 10):
             rating_input.tooltip = "Rating must be between 1 and 10."
             rating_input.focus()
+            self._set_status("Rating must be between 1 and 10.", error=True)
             return
 
         tag = tag_input.value.strip() or None
@@ -160,3 +218,12 @@ class MainScreen(Screen):
 
         # Refresh recent list
         self._refresh_recent_moods()
+        self._set_status("Mood saved. Press [g] to see trends.", error=False)
+
+    def _set_status(self, message: str, error: bool = False) -> None:
+        """Show status feedback below the form."""
+        status = self.query_one("#status", Static)
+        status.remove_class("error")
+        if error:
+            status.add_class("error")
+        status.update(message)
