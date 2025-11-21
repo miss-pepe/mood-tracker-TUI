@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+from datetime import date, datetime
+
+from textual.app import ComposeResult
+from textual.screen import Screen
+from textual.widgets import Static
+from textual import events
+
+from ..models.storage import load_moods, save_moods, MoodEntry
+from ..theme import DEFAULT_THEME_NAME, THEMES, get_palette
+from ..models.preferences import load_preferences, save_preferences, UserPreferences
+
+                                        # ASCII box pieces
+BOX_WIDTH = 74
+INNER_WIDTH = BOX_WIDTH - 2
+
+BOX_TOP = "┌" + "─" * INNER_WIDTH + "┐"
+BOX_BOTTOM = "└" + "─" * INNER_WIDTH + "┘"
+MOOD_TRACKER_HEADER = BOX_TOP
+MOOD_HISTORY_DIVIDER = "├" + "─" * INNER_WIDTH + "┤"
+
+def _create_section_divider(label: str) -> str:
+    """Create a divider line with centered label text."""
+    label_with_spaces = f" {label} "
+    remaining = INNER_WIDTH - len(label_with_spaces)
+    left_dashes = remaining // 2
+    right_dashes = remaining - left_dashes
+    
+    return f"├{'─' * left_dashes}{label_with_spaces}{'─' * right_dashes}┤"
+
+MOOD_OPTIONS = [                                        # Mood options as (label_for_ui, numeric_score_to_save)
+    (":D  Great", 9),
+    (":)  Good", 7),
+    (":|  Meh", 5),
+    (":(  Bad", 3),
+    (":'( Awful", 1),
+]
+
+# ... rest of the original file content ...

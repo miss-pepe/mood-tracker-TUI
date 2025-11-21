@@ -12,11 +12,22 @@ from ..theme import DEFAULT_THEME_NAME, THEMES, get_palette
 from ..models.preferences import load_preferences, save_preferences, UserPreferences
 
                                         # ASCII box pieces
-BOX_TOP = "┌───────────────────────────── MOOD TRACKER ─────────────────────────────┐"
-BOX_BOTTOM = "└────────────────────────────────────────────────────────────────────────┘"
-SECTION_DIVIDER = "├──────────────────────────── Mood History ──────────────────────────────┤"
+BOX_WIDTH = 74
+INNER_WIDTH = BOX_WIDTH - 2
 
-INNER_WIDTH = len(BOX_TOP) - 2                          # number of characters between the vertical borders
+BOX_TOP = "┌" + "─" * INNER_WIDTH + "┐"
+BOX_BOTTOM = "└" + "─" * INNER_WIDTH + "┘"
+MOOD_TRACKER_HEADER = BOX_TOP
+MOOD_HISTORY_DIVIDER = "├" + "─" * INNER_WIDTH + "┤"
+
+def _create_section_divider(label: str) -> str:
+    """Create a divider line with centered label text."""
+    label_with_spaces = f" {label} "
+    remaining = INNER_WIDTH - len(label_with_spaces)
+    left_dashes = remaining // 2
+    right_dashes = remaining - left_dashes
+    
+    return f"├{'─' * left_dashes}{label_with_spaces}{'─' * right_dashes}┤"
 
 MOOD_OPTIONS = [                                        # Mood options as (label_for_ui, numeric_score_to_save)
     (":D  Great", 9),
@@ -26,9 +37,7 @@ MOOD_OPTIONS = [                                        # Mood options as (label
     (":'( Awful", 1),
 ]
 
-
 THEME_MASCOTS = {                                   
-
     "Neon Midnight": """    ✨ ⭐
    (◕‿◕)
     >🌙< 
@@ -338,7 +347,7 @@ def display_theme_mascot(theme_name):           # Example of how to display a ma
     else:
         print("No mascot found for this theme!")         # Fallback if theme doesn't have a mascot yet
 
-display_theme_mascot("Neon Midnight")           # Usage example:
+# display_theme_mascot("Neon Midnight")          
 
 from textual.widgets import Static, Label
 from textual.containers import Container, Vertical
@@ -379,6 +388,9 @@ class HelpScreen(Screen):
 class MainScreen(Screen):
     """Single-screen UI that matches the ASCII mockup."""
     show_history = True
+
+    def _apply_padding(self, text: str, padding: int) -> str:
+        return " " * padding + text
 
     def _get_centered_padding(self) -> int:
         """Calculate left padding needed to center the box on the screen."""
@@ -446,51 +458,48 @@ class MainScreen(Screen):
     # ---------------- Rendering helpers ----------------
 
     def render_view(self) -> None:
-        """Rebuild the full ASCII box and update the Static."""
-        # Calculate centering padding once
+        """Rebuild the full UI by composing all sections together."""
         padding = self._get_centered_padding()
     
-        mood_lines = self._build_mood_section_lines()
-        history_lines = self._build_history_section_lines()
-
-        lines: list[str] = []
+        lines = []
+        lines.append(self._apply_padding(self._colorize(MOOD_TRACKER_HEADER), padding))
     
-    # Apply padding to box top
-        top_line = self._colorize_line(BOX_TOP, self.palette.accent_mid)
-        lines.append(" " * padding + top_line if padding > 0 else top_line)
-
-    # Mood section with padding
-        for content, style in mood_lines:
+        for content, style in self._build_mood_section_lines():
             lines.append(self._wrap_in_box(content, style, padding))
-
-    # Divider with padding
-        divider_line = self._colorize_line(SECTION_DIVIDER, self.palette.accent_mid)
-        lines.append(" " * padding + divider_line if padding > 0 else divider_line)
-
-    # History section (only if not hidden)
+    
+        lines.append(self._apply_padding(self._colorize(MOOD_HISTORY_DIVIDER), padding))
+    
         if self.show_history:
-            for content, style in history_lines:
+            for content, style in self._build_history_section_lines():
                 lines.append(self._wrap_in_box(content, style, padding))
-
-    # Bottom border with padding
-        bottom_line = self._colorize_line(BOX_BOTTOM, self.palette.accent_mid)
-        lines.append(" " * padding + bottom_line if padding > 0 else bottom_line)
-
+    
+        lines.append(self._apply_padding(self._colorize(BOX_BOTTOM), padding))
+    
         self.main_view.update("\n".join(lines))
 
     def _wrap_in_box(self, content: str, style: str | None = None, padding: int = 0) -> str:
-        """Pad one line of content inside │ ... │ to match box width and center it."""
         padded_content = content.ljust(INNER_WIDTH)
         line = f"│{padded_content}│"
-        colored_line = self._colorize_line(line, style or self.palette.text_primary)
+        colored_line = self._colorize(line, style)  # Pass style as second argument
+        return self._apply_padding(colored_line, padding)
+
+    def _colorize(self, line: str, style: str | None = None) -> str:
+        """Apply Textual color/style markup to a line.
     
-        if padding > 0:                # Add left padding for centering
-            return " " * padding + colored_line
-        return colored_line
-
-    def _colorize_line(self, line: str, color: str) -> str:
+        This is a convenience wrapper that applies color tags to text.
+        If no style is provided, it uses the theme's default text color.
+    
+        Args:
+            line: Text to colorize
+            style: Optional Textual style string (e.g., "bold red", "#ff00ff")
+               If None, uses the theme's primary text color.
+    
+        Returns:
+            Line wrapped in Textual color markup tags
+        """
+        color = style or self.palette.text_primary
         return f"[{color}]{line}[/{color}]"
-
+    
     def _build_mood_section_lines(self) -> list[tuple[str, str | None]]:
         """Build the lines for the top 'How are you feeling?' section."""
         today_str = date.today().isoformat()
