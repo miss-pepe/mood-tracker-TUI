@@ -24,6 +24,10 @@ MAX_BOX_WIDTH = 140                 # Maximum box width
 BOX_WIDTH = 125                     # Default/preferred box width
 INNER_WIDTH = BOX_WIDTH - 2
 
+# Chaos and glitch effect constants
+GLITCH_ACTIVATION_CHANCE = 0.08     # 8% chance of glitch on app start or theme change
+GLITCH_EFFECT_CHANCE = 0.3          # 30% chance of glitch effects when glitch is active
+
 MOOD_OPTIONS = [                      # Mood options as (label_for_ui, numeric_score_to_save)
     (":D  Great", 9),
     (":)  Good", 7),
@@ -471,6 +475,10 @@ class ToastNotification(Static):
         
         self.styles.visibility = "hidden"
 
+# Direction label constants
+DIRECTION_LABEL_NORMAL = "              lower ←──────────── mood →────────────→ higher"
+DIRECTION_LABEL_GLITCHED = "              higher ←──────────── mood →────────────→ lower"
+
 # Dramatic mood confirmations
 DRAMATIC_CONFIRMATIONS = {
     9: [  # Great
@@ -633,8 +641,8 @@ class MainScreen(Screen):
         self.chaos_sequence = []
         self.glitch_active = False
         
-        # Random glitch moment (5-10% chance)
-        if random.random() < 0.08:
+        # Random glitch moment (8% chance)
+        if random.random() < GLITCH_ACTIVATION_CHANCE:
             self.glitch_active = True
 
         self.theme_names = list(THEMES.keys())          # Set up theme system using saved preference
@@ -899,10 +907,10 @@ class MainScreen(Screen):
         lines.append(("", None))
         
         # Glitch effect: occasionally invert the direction label
-        if self.glitch_active and random.random() < 0.3:
-            direction_text = "              higher ←──────────── mood →────────────→ lower"
+        if self.glitch_active and random.random() < GLITCH_EFFECT_CHANCE:
+            direction_text = DIRECTION_LABEL_GLITCHED
         else:
-            direction_text = "              lower ←──────────── mood →────────────→ higher"
+            direction_text = DIRECTION_LABEL_NORMAL
         
         lines.append((direction_text, self.palette.accent_low))
         lines.append(("", None))
@@ -952,8 +960,8 @@ class MainScreen(Screen):
         self.preferences.current_theme = self.theme_names[self.theme_index]
         save_preferences(self.preferences)
         
-        # Random glitch moment on theme change (5-10% chance)
-        if random.random() < 0.08:
+        # Random glitch moment on theme change (8% chance)
+        if random.random() < GLITCH_ACTIVATION_CHANCE:
             self.glitch_active = not self.glitch_active
         
         # Show the theme mascot popup!
@@ -962,8 +970,8 @@ class MainScreen(Screen):
         display_name = ' '.join(word.capitalize() for word in theme_name.split('_'))
         mascot_art = THEME_MASCOTS.get(display_name, "No mascot available")
         
-        # Occasionally show glitchy mascot
-        if self.glitch_active and random.random() < 0.3:
+        # Occasionally show glitchy mascot (30% chance when glitch is active)
+        if self.glitch_active and random.random() < GLITCH_EFFECT_CHANCE:
             mascot_art = random.choice(GLITCH_FACES)
         
         self.app.push_screen(ThemeMascotPopup(display_name, mascot_art, self.palette))

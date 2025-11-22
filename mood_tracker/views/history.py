@@ -10,6 +10,9 @@ from textual.containers import Container, VerticalScroll
 from textual import events
 from ..models.storage import load_moods
 
+# Box width for the history header
+HISTORY_BOX_WIDTH = 78
+
 
 class DetailedHistoryScreen(Screen):
     """Full-screen view showing detailed mood history and statistics."""
@@ -36,9 +39,9 @@ class DetailedHistoryScreen(Screen):
         """Build the header section."""
         return (
             f"[bold {self.palette.accent_high}]"
-            f"┌{'─' * 78}┐\n"
-            f"│{'Detailed Mood History — your emotional stock chart 📈📉'.center(78)}│\n"
-            f"└{'─' * 78}┘"
+            f"┌{'─' * HISTORY_BOX_WIDTH}┐\n"
+            f"│{'Detailed Mood History — your emotional stock chart 📈📉'.center(HISTORY_BOX_WIDTH)}│\n"
+            f"└{'─' * HISTORY_BOX_WIDTH}┘"
             f"[/]"
         )
     
