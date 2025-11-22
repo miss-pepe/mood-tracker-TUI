@@ -2,6 +2,9 @@
 
 A small Textual-powered terminal app to log how you're feeling, add optional tags/notes, and review recent trends without leaving the shell.
 
+There is a live preview of this project for you to view using the link here : 
+[TUI Mood Tracking](https://miss-pepe.github.io/mood-tracker-TUI "TUI Mood Tracker")
+
 ## Features
 - Log a 1-10 mood rating with optional tag and note.
 - See the five most recent entries on the home screen.
