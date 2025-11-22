@@ -105,11 +105,15 @@ class ExportScreen(Screen):
                 self._show_status(f"✓ Exported to {output_file}")
             
             # Automatically close the modal after a successful export
-            self.set_timer(2.0, self.dismiss)
+            self.set_timer(2.0, self._auto_dismiss)
             
         except Exception as e:
             # Show any errors that occur during file writing
             self._show_status(f"Export failed: {str(e)}", is_error=True)
+    
+    def _auto_dismiss(self) -> None:
+        """Callback method for auto-dismissing the export screen."""
+        self.dismiss()
     
     def _show_status(self, message: str, is_error: bool = False) -> None:
         """Update the status message area with feedback.

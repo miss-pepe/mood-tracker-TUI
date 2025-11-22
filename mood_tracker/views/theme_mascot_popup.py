@@ -50,4 +50,8 @@ class ThemeMascotPopup(Screen):
     
     def on_mount(self) -> None:
         """Auto-dismiss the popup after 2 seconds."""
-        self.set_timer(2.0, self.dismiss)
+        self.set_timer(2.0, self._auto_dismiss)
+    
+    def _auto_dismiss(self) -> None:
+        """Callback method for auto-dismissing the popup."""
+        self.dismiss()

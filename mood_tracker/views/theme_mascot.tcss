@@ -23,7 +23,9 @@
 
 #mood-companion {
     text-align: center;
-    padding: 1;
+    padding: 1 2;
     margin-bottom: 1;
     border: round;
+    width: 100%;
+    content-align: center middle;
 }
