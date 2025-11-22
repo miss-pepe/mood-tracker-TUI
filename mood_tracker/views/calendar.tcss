@@ -1,9 +1,11 @@
-/* Styling for the monthly calendar view */
+/* Styling for the monthly calendar view - responsive */
 
 #calendar-container {
     /* Center the calendar on the screen */
     align: center middle;
-    width: 50;
+    width: auto;
+    min-width: 40;
+    max-width: 90%;
     height: auto;
     padding: 2;
     /* Give it a visible border using the theme */

@@ -2,13 +2,14 @@
 
 A small Textual-powered terminal app to log how you're feeling, add optional tags/notes, and review recent trends without leaving the shell.
 
-There is a live preview of this project for you to view using the link here : 
+There is a live preview of this project for you to view using the link here :
 [TUI Mood Tracking](https://miss-pepe.github.io/mood-tracker-TUI "TUI Mood Tracker")
 
 ## Features
 
 - **Quick Mood Logging**: Select from 5 mood options (Great, Good, Meh, Bad, Awful) with easy keyboard navigation
 - **Vim-Style Navigation**: Use K/J or arrow keys to navigate - whichever you prefer!
+- **Responsive Design**: Adapts seamlessly to multiple screen sizes - works great on small terminals (80+ cols) to ultra-wide displays (140+ cols)
 - **Mood History Panel**: View your recent mood entries at a glance (toggle with `H`)
 - **Monthly Calendar View**: See your moods displayed on a calendar (press `M`)
 - **Export Functionality**: Export your mood data for backup or analysis (press `E`)
@@ -21,12 +22,14 @@ There is a live preview of this project for you to view using the link here :
 ## Getting Started
 
 1. **Create and activate a virtual environment** (recommended):
+
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 2. **Install dependencies**:
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -39,10 +42,12 @@ There is a live preview of this project for you to view using the link here :
 ## Controls
 
 ### Navigation
+
 - `↑` or `K` — Move selection up
 - `↓` or `J` — Move selection down (Vim-style keys supported!)
 
 ### Actions
+
 - `Enter` or `S` — Save current mood entry
 - `T` — Cycle through available themes
 - `H` — Toggle history panel visibility
@@ -56,39 +61,41 @@ There is a live preview of this project for you to view using the link here :
 Your mood entries are automatically saved to `data/moods.json` in the project directory. User preferences (theme choice, last selected mood, panel visibility) are stored in `~/.mood_tracker/preferences.json`.
 
 To reset your data:
+
 - Delete `data/moods.json` to clear all mood entries
 - Delete `~/.mood_tracker/preferences.json` to reset preferences to defaults
 
 ## Themes Available
-- Neon Midnight  
-- Galactic Slushie  
-- Retro Arcade CRT  
-- Dragonfire Core  
-- Oceanic Overdrive  
-- Toxic Slime Lab  
-- Cosmic Jellyfish  
-- 90s Vapor Arcade  
-- Night-Shift Rainbow  
-- Cyber Swamp Witch  
-- Midnight Bubblegum  
-- Storm Witch  
-- Chaotic Pastel Hacker  
-- Neon Anxiety  
-- Galaxy Sweetheart  
-- Cyber Siren  
-- Void Candy  
-- Hacker Bunny  
-- Wicked Pastel  
-- Caffeine Overdose  
-- Gremlin Hacker Glow  
-- Chaotic Intelligence Matrix  
-- Midnight Mischief  
-- Terminal Witchcraft  
-- Neon Disaster Darling  
-- Quantum Sass Core™  
-- Feral Cyberpunk Assistant  
-- Overclocked Personality Core  
-- The “Don’t Let the Sweet Voice Fool You” Palette  
+
+- Neon Midnight
+- Galactic Slushie
+- Retro Arcade CRT
+- Dragonfire Core
+- Oceanic Overdrive
+- Toxic Slime Lab
+- Cosmic Jellyfish
+- 90s Vapor Arcade
+- Night-Shift Rainbow
+- Cyber Swamp Witch
+- Midnight Bubblegum
+- Storm Witch
+- Chaotic Pastel Hacker
+- Neon Anxiety
+- Galaxy Sweetheart
+- Cyber Siren
+- Void Candy
+- Hacker Bunny
+- Wicked Pastel
+- Caffeine Overdose
+- Gremlin Hacker Glow
+- Chaotic Intelligence Matrix
+- Midnight Mischief
+- Terminal Witchcraft
+- Neon Disaster Darling
+- Quantum Sass Core™
+- Feral Cyberpunk Assistant
+- Overclocked Personality Core
+- The “Don’t Let the Sweet Voice Fool You” Palette
 - Spicy Tech Oracle
 - Dracula
 - One Dark Pro
@@ -111,7 +118,6 @@ To reset your data:
 - Jellybeans
 - Horizon Dark
 
-
 ## Project Structure
 
 ```
@@ -132,11 +138,15 @@ mood-tracker-TUI/
 ## Dependencies
 
 Built with:
+
 - [Textual](https://github.com/Textualize/textual) - Terminal UI framework
 - Python 3.9+
 
 ## Tips & Tricks
 
+- **Responsive Layout**: The interface automatically adapts when you resize your terminal window - try it!
+- **Minimum Width**: For the best experience, use a terminal at least 80 columns wide
+- **Optimal Width**: The interface looks best at 125 columns but scales up to 140 columns for ultra-wide displays
 - **Accessibility**: The app works great with screen readers and supports keyboard-only navigation
 - **Customization**: Each theme includes a unique ASCII mascot that appears when you select it
 - **Performance**: The history panel can be toggled off (`H`) for a cleaner, more minimal view

@@ -6,5 +6,8 @@
   "editor.formatOnSave": true,
   "editor.mouseWheelZoom": true,
   "editor.formatOnPaste": true,
-  "editor.fontSize": 10
+  "editor.fontSize": 10,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  }
 }

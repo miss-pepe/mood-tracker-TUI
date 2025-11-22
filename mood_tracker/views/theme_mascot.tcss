@@ -1,8 +1,10 @@
-/* Styling for the theme mascot popup */
+/* Styling for the theme mascot popup - responsive */
 
 #mascot-popup {
     align: center middle;
-    width: 50;
+    width: auto;
+    min-width: 30;
+    max-width: 70%;
     height: auto;
     padding: 2;
     border: thick;
@@ -19,7 +21,7 @@
     text-align: center;
 }
 
-/* Styling for the mood companion widget */
+/* Styling for the mood companion widget - responsive */
 
 #mood-companion {
     text-align: center;
@@ -27,5 +29,6 @@
     margin-bottom: 1;
     border: round;
     width: 100%;
+    max-width: 90%;
     content-align: center middle;
 }

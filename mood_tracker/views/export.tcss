@@ -1,8 +1,10 @@
-/* Styling for the export modal */
+/* Styling for the export modal - responsive */
 
 #export-modal {
     align: center middle;
-    width: 70;
+    width: auto;
+    min-width: 50;
+    max-width: 80%;
     height: auto;
     padding: 2;
     border: thick;
@@ -34,11 +36,14 @@
 
 #format-buttons Button {
     margin: 0 1;
+    min-width: 12;
 }
 
 #export-modal > Button {
-    width: 30;
-    margin: 0;
+    width: auto;
+    min-width: 20;
+    max-width: 30;
+    align: center middle;
 }
 
 #export-status {
