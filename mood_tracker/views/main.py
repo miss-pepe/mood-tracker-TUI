@@ -14,6 +14,7 @@ from ..models.preferences import load_preferences, save_preferences, UserPrefere
 from .calendar import MonthlyCalendarScreen
 from ..audio import SoundManager
 from ..widgets.mood_companion import MoodCompanion
+from ..utils import ascii_for_score, get_mood_color
 from textual import work
 import asyncio
 import random
@@ -348,7 +349,7 @@ def display_theme_mascot(theme_name):           # Example of how to display a ma
 
 from textual.widgets import Static, Label
 from textual.containers import Container, Vertical
-import asyncio
+
 
 class HelpScreen(Screen):
     """Modal dialog showing keyboard shortcuts and help information."""
@@ -794,19 +795,6 @@ class MainScreen(Screen):
         color = style or self.palette.text_primary
         return f"[{color}]{line}[/{color}]"
     
-    def _get_mood_color(self, score: int) -> str:
-        """Get consistent color for mood score."""
-        if score >= 9:  # Great
-            return "#00ff00"  # Bright green
-        elif score >= 7:  # Good
-            return "#00ffff"  # Cyan
-        elif score >= 5:  # Meh
-            return "#ffff00"  # Yellow
-        elif score >= 3:  # Bad
-            return "#ff6600"  # Orange
-        else:  # Awful
-            return "#ff0000"  # Bright red
-    
     def _build_status_strip(self, padding: int) -> str:
         """Build the status strip at the bottom."""
         entries = load_moods()
@@ -837,7 +825,7 @@ class MainScreen(Screen):
         for idx, (label, score) in enumerate(MOOD_OPTIONS):        # Mood options
             marker = "(x)" if idx == self.selected_index else "( )"
             # Color-coded moods with consistent colors
-            mood_color = self._get_mood_color(score)
+            mood_color = get_mood_color(score)
             # Enhanced styling for selected option with pulse effect
             if idx == self.selected_index:
                 style = f"bold {mood_color}"
@@ -879,7 +867,7 @@ class MainScreen(Screen):
         
         for entry in last_entries:
             date_str = entry.timestamp.strftime("%m-%d")
-            ascii_face = self._ascii_for_score(entry.score)
+            ascii_face = ascii_for_score(entry.score)
             bar_length = self._calculate_scaled_bar_length(
                 entry.score, max_score, max_bar_width=30
             )
@@ -895,7 +883,7 @@ class MainScreen(Screen):
             line_text = f"{date_str}: {ascii_face:<4} {bar}{note_indicator}"
             
             # Use consistent color coding for mood scores
-            bar_color = self._get_mood_color(entry.score)
+            bar_color = get_mood_color(entry.score)
             
             # Now we can append with the color as the style parameter
             # The _wrap_in_box method will apply this color to the whole line
@@ -919,18 +907,6 @@ class MainScreen(Screen):
 
 
 
-    def _ascii_for_score(self, score: int) -> str:
-        """ASCII replacement for emojis to preserve alignment."""
-        if score >= 9:
-            return ":D"
-        if score >= 7:
-            return ":)"
-        if score >= 5:
-            return ":|"
-        if score >= 3:
-            return ":("
-        return ":'("
-
     def _cycle_theme(self) -> None:
         """Cycle through available themes and update the UI."""
         self.theme_index = (self.theme_index + 1) % len(self.theme_names)
@@ -939,7 +915,8 @@ class MainScreen(Screen):
         self.preferences.current_theme = self.theme_names[self.theme_index]
         save_preferences(self.preferences)
         
-        # Random glitch moment on theme change (8% chance)
+        # Random glitch moment on theme change (8% chance to toggle)
+        # This creates unpredictable glitches that can turn on or off randomly
         if random.random() < GLITCH_ACTIVATION_CHANCE:
             self.glitch_active = not self.glitch_active
         
@@ -1006,7 +983,7 @@ class MainScreen(Screen):
         save_preferences(self.preferences)
 
         # Show animated toast notification with dramatic confirmation
-        emoji = self._ascii_for_score(score)
+        emoji = ascii_for_score(score)
         dramatic = get_dramatic_confirmation(score)
         
         if note_text:
@@ -1046,7 +1023,7 @@ class MainScreen(Screen):
         # Animate each bar sequentially with a slight stagger
         for i, entry in enumerate(last_entries):
             date_str = entry.timestamp.strftime("%m-%d")
-            ascii_face = self._ascii_for_score(entry.score)
+            ascii_face = ascii_for_score(entry.score)
             bar_length = self._calculate_scaled_bar_length(
                 entry.score, max_score, max_bar_width=30
             )

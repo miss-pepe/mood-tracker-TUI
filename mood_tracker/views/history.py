@@ -9,6 +9,7 @@ from textual.widgets import Static
 from textual.containers import Container, VerticalScroll
 from textual import events
 from ..models.storage import load_moods
+from ..utils import ascii_for_score, get_mood_color
 
 # Box width for the history header
 HISTORY_BOX_WIDTH = 78
@@ -113,8 +114,8 @@ class DetailedHistoryScreen(Screen):
         
         best_date = best_entry.timestamp.strftime("%Y-%m-%d")
         worst_date = worst_entry.timestamp.strftime("%Y-%m-%d")
-        stats.append(f"[{self.palette.success}]Best day: {best_date} ({best_entry.score}/10) {self._ascii_for_score(best_entry.score)}[/]")
-        stats.append(f"[{self.palette.danger}]Toughest day: {worst_date} ({worst_entry.score}/10) {self._ascii_for_score(worst_entry.score)}[/]")
+        stats.append(f"[{self.palette.success}]Best day: {best_date} ({best_entry.score}/10) {ascii_for_score(best_entry.score)}[/]")
+        stats.append(f"[{self.palette.danger}]Toughest day: {worst_date} ({worst_entry.score}/10) {ascii_for_score(worst_entry.score)}[/]")
         
         return "\n".join(stats)
     
@@ -175,8 +176,8 @@ class DetailedHistoryScreen(Screen):
         lines = []
         for entry in recent:
             date_str = entry.timestamp.strftime("%Y-%m-%d %H:%M")
-            ascii_face = self._ascii_for_score(entry.score)
-            color = self._color_for_score(entry.score)
+            ascii_face = ascii_for_score(entry.score)
+            color = get_mood_color(entry.score)
             
             # Build the entry line
             note_indicator = " ✏️" if entry.note else ""
@@ -189,31 +190,6 @@ class DetailedHistoryScreen(Screen):
             lines.append(line)
         
         return "\n".join(lines)
-    
-    def _ascii_for_score(self, score: int) -> str:
-        """ASCII face for score."""
-        if score >= 9:
-            return ":D"
-        if score >= 7:
-            return ":)"
-        if score >= 5:
-            return ":|"
-        if score >= 3:
-            return ":("
-        return ":'("
-    
-    def _color_for_score(self, score: int) -> str:
-        """Consistent color coding for mood scores."""
-        if score >= 9:  # Great
-            return "#00ff00"  # Bright green
-        elif score >= 7:  # Good
-            return "#00ffff"  # Cyan
-        elif score >= 5:  # Meh
-            return "#ffff00"  # Yellow
-        elif score >= 3:  # Bad
-            return "#ff6600"  # Orange
-        else:  # Awful
-            return "#ff0000"  # Bright red
     
     def action_dismiss(self) -> None:
         """Close the history screen and return to main."""
