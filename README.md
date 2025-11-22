@@ -7,22 +7,44 @@ There is a live preview of this project for you to view using the link here :
 
 ## Features
 
+### Core Features
 - **Quick Mood Logging**: Select from 5 mood options (Great, Good, Meh, Bad, Awful) with easy keyboard navigation
-- **Note-Taking**: Add optional notes to your mood entries to capture context and thoughts
+- **Note-Taking**: Add optional notes to mood entries to capture context and thoughts
 - **Vim-Style Navigation**: Use K/J or arrow keys to navigate - whichever you prefer!
 - **Color-Coded Moods**: Consistent color scheme across all views (Great=green, Good=cyan, Meh=yellow, Bad=orange, Awful=red)
 - **Animated UI**: Smooth transitions for mood selection, growing history bars, and toast notifications
-- **Mood History Panel**: View your recent mood entries at a glance (toggle with `H`)
-- **Detailed History View**: Press `V` for comprehensive statistics, streaks, and last 30 entries
+- **Dramatic Confirmations**: Overly dramatic system messages when logging moods
+
+### History & Analytics
+- **Quick History Panel**: View your last 5 mood entries in the main view (toggle with `H`)
+- **Detailed History Screen**: Press `V` to see comprehensive history with:
+  - Last 30 entries with timestamps and notes
+  - Statistics (average mood, best/worst days for overall, 7-day, and 30-day periods)
+  - Mood streaks tracking
+  - Scrollable view
 - **Monthly Calendar View**: See your moods displayed on a calendar (press `M`)
 - **Export Functionality**: Export your mood data for backup or analysis (press `E`)
+
+### Gamification
+- **Mood Streaks**: Track consecutive "not awful" days (score ≥ 3) and "good or better" days (score ≥ 7)
+- **Entry Counter**: See total entries logged in the status strip
+- **Note Indicators**: ✏️ icon shows when entries have notes
+
+### Visual Enhancements & Themes
 - **Rich Theme System**: 60+ beautiful themes with custom color palettes and ASCII mascots
-- **Dramatic Confirmations**: Overly dramatic system messages when logging moods
-- **Mood Streaks**: Track consecutive "not awful" and "good or better" days
-- **Chaos Mode**: Secret easter egg - type `C-H-A-O-S` to activate 🔥
-- **Glitch Effects**: Random glitchy moments (5-10% chance) for extra chaos
+- **Status Strip**: Bottom bar showing theme, chaos mode status, and entry count
+- **Playful Headers**: "Mood History — your emotional stock chart 📈📉"
 - **Sound Effects**: Audio feedback for interactions (when enabled)
-- **Status Strip**: Real-time display of theme, chaos mode, and entry count
+
+### Easter Eggs & Chaos
+- **Chaos Mode**: Secret mode activated by typing `C-H-A-O-S` (in sequence) - toggles chaotic visuals 🔥
+- **Glitch Effects**: Random glitchy moments (8% chance on app start or theme change)
+  - Occasionally inverts mood direction labels
+  - Shows glitchy mascot faces
+  - 30% chance of glitch effects when glitch mode is active
+- **Dramatic Confirmations**: From "✨ peak slay ✨" to "Oh, babe. Logging emergency vibes. 💔"
+
+### Persistence & Help
 - **Persistent Storage**: All entries saved to `data/moods.json`
 - **Built-in Help**: Press `?` to see all keyboard shortcuts
 - **Preference Persistence**: Remembers your last selected mood, theme choice, and panel visibility
@@ -63,36 +85,8 @@ There is a live preview of this project for you to view using the link here :
 
 ### Easter Eggs
 - Type `C-H-A-O-S` (in sequence) — Toggle chaos mode 🔥
-- Random glitch moments (5-10% chance on app start or theme change)
+- Random glitch moments (8% chance on app start or theme change, 30% chance of effects when active)
 - Dramatic mood confirmations when saving entries
-
-## Features
-
-### Core Features
-- **Quick Mood Logging**: Select from 5 mood options with easy keyboard navigation
-- **Note-Taking**: Add optional notes to mood entries to capture context
-- **Color-Coded Moods**: Consistent color scheme (Great=green, Good=cyan, Meh=yellow, Bad=orange, Awful=red)
-- **Animated UI**: Smooth animations for mood selection, history bars, and toast notifications
-- **Dramatic Confirmations**: Overly dramatic system messages when saving moods
-
-### History & Analytics
-- **Quick History Panel**: View your last 5 mood entries in the main view (toggle with `H`)
-- **Detailed History Screen**: Press `V` to see comprehensive history with:
-  - Last 30 entries with timestamps and notes
-  - Statistics (average mood, best/worst days)
-  - Mood streaks tracking
-  - Scrollable view
-
-### Gamification
-- **Mood Streaks**: Track consecutive "not awful" days and "good or better" days
-- **Entry Counter**: See total entries logged in the status strip
-- **Note Indicators**: ✏️ icon shows when entries have notes
-
-### Visual Enhancements
-- **Status Strip**: Bottom bar showing theme, chaos mode status, and entry count
-- **Playful Headers**: "Mood History — your emotional stock chart 📈📉"
-- **Glitch Effects**: Occasional random glitches (inverted labels, glitchy mascots)
-- **Chaos Mode**: Secret mode with chaotic visuals and altered dividers
 
 ## Data Storage
 

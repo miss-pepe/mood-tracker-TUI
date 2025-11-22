@@ -636,12 +636,12 @@ class MainScreen(Screen):
         self.show_history = self.preferences.show_history_panel
         self.sound_manager = SoundManager()
         
-        # Initialize chaos mode tracking
+        # Initialize chaos mode tracking - always start fresh each session
         self.chaos_mode = False
         self.chaos_sequence = []
         self.glitch_active = False
         
-        # Random glitch moment (8% chance)
+        # Random glitch moment (8% chance) - gives occasional surprise glitches
         if random.random() < GLITCH_ACTIVATION_CHANCE:
             self.glitch_active = True
 
@@ -919,19 +919,6 @@ class MainScreen(Screen):
 
 
 
-    def _bar_color_for_score(self, score: int) -> str:
-        """Return the specific bar color for a mood score."""
-        if score >= 9:  # Great
-            return self.palette.success
-        elif score >= 7:  # Good
-            return self.palette.accent_low
-        elif score >= 5:  # Meh
-            return "#ffaa00"  # Yellow/orange for neutral
-        elif score >= 3:  # Bad
-            return "#ff6600"  # Orange for concerning
-        else:  # Awful
-            return self.palette.danger
-
     def _ascii_for_score(self, score: int) -> str:
         """ASCII replacement for emojis to preserve alignment."""
         if score >= 9:
@@ -943,14 +930,6 @@ class MainScreen(Screen):
         if score >= 3:
             return ":("
         return ":'("
-
-    def _history_color_for_score(self, score: int) -> str:
-        """Return color for history bar based on score."""
-        if score >= 7:
-            return self.palette.success
-        if score >= 4:
-            return self.palette.accent_low
-        return self.palette.danger
 
     def _cycle_theme(self) -> None:
         """Cycle through available themes and update the UI."""
