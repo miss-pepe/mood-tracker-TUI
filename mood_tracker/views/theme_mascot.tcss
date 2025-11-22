@@ -1,0 +1,29 @@
+/* Styling for the theme mascot popup */
+
+#mascot-popup {
+    align: center middle;
+    width: 50;
+    height: auto;
+    padding: 2;
+    border: thick;
+    background: $background;
+}
+
+#mascot-theme-name {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#mascot-art {
+    text-align: center;
+}
+
+/* Styling for the mood companion widget */
+
+#mood-companion {
+    text-align: center;
+    padding: 1;
+    margin-bottom: 1;
+    border: round;
+}

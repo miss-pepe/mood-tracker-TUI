@@ -15,6 +15,7 @@ class MoodTrackerApp(App):
     "views/reflection.tcss",
     "views/export.tcss",
     "views/calendar.tcss",
+    "views/theme_mascot.tcss",
 ]
 
 

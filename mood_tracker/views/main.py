@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .reflection import ReflectionPromptScreen
 from .export import ExportScreen
+from .theme_mascot_popup import ThemeMascotPopup
 from datetime import date, datetime
 from textual.app import ComposeResult
 from textual.screen import Screen
@@ -11,6 +12,7 @@ from ..theme import DEFAULT_THEME_NAME, THEMES, get_palette, get_border_style
 from ..models.preferences import load_preferences, save_preferences, UserPreferences
 from .calendar import MonthlyCalendarScreen
 from ..audio import SoundManager
+from ..widgets.mood_companion import MoodCompanion
 from textual import work
 
 
@@ -452,8 +454,17 @@ class MainScreen(Screen):
         self.app.push_screen(HelpScreen())
 
     def compose(self) -> ComposeResult:
-        self.main_view = Static(id="main-view")
-        yield self.main_view
+        from textual.containers import Vertical
+        
+        # Main container for layout
+        with Vertical():
+            # Mood companion at the top
+            self.mood_companion = MoodCompanion(initial_score=5)
+            yield self.mood_companion
+            
+            # Main mood tracker view
+            self.main_view = Static(id="main-view")
+            yield self.main_view
 
     def on_mount(self) -> None:
         self.preferences = load_preferences()           # Load user preferences from disk
@@ -470,6 +481,12 @@ class MainScreen(Screen):
 
         self.palette = get_palette(self.theme_names[self.theme_index])
         self.border_style = get_border_style(self.theme_names[self.theme_index])
+        
+        # Initialize mood companion with current palette and selected mood
+        _, initial_score = MOOD_OPTIONS[self.selected_index]
+        self.mood_companion.palette = self.palette
+        self.mood_companion.update_mood(initial_score)
+        
         self.render_view()
 
     async def on_key(self, event: events.Key) -> None:
@@ -481,6 +498,10 @@ class MainScreen(Screen):
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
             self.sound_manager.play_selection()
+            # Update mood companion
+            if hasattr(self, 'mood_companion'):
+                _, score = MOOD_OPTIONS[self.selected_index]
+                self.mood_companion.update_mood(score)
             self.render_view()
 
         elif key in ("down", "j"):
@@ -488,6 +509,10 @@ class MainScreen(Screen):
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
             self.sound_manager.play_selection()
+            # Update mood companion
+            if hasattr(self, 'mood_companion'):
+                _, score = MOOD_OPTIONS[self.selected_index]
+                self.mood_companion.update_mood(score)
             self.render_view()
 
         elif key == "enter" or key == "s":
@@ -697,6 +722,20 @@ class MainScreen(Screen):
         self.border_style = get_border_style(self.theme_names[self.theme_index])
         self.preferences.current_theme = self.theme_names[self.theme_index]
         save_preferences(self.preferences)
+        
+        # Show the theme mascot popup!
+        theme_name = self._current_theme_name()
+        # Convert snake_case to Title Case for display
+        display_name = ' '.join(word.capitalize() for word in theme_name.split('_'))
+        mascot_art = THEME_MASCOTS.get(display_name, "No mascot available")
+        self.app.push_screen(ThemeMascotPopup(display_name, mascot_art, self.palette))
+        
+        # Update the mood companion with current theme
+        if hasattr(self, 'mood_companion'):
+            self.mood_companion.palette = self.palette
+            _, score = MOOD_OPTIONS[self.selected_index]
+            self.mood_companion.update_mood(score)
+        
         self.render_view()
 
     def _current_theme_name(self) -> str:
