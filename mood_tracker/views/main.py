@@ -2,6 +2,7 @@ from __future__ import annotations
 from .reflection import ReflectionPromptScreen
 from .export import ExportScreen
 from .theme_mascot_popup import ThemeMascotPopup
+from .history import DetailedHistoryScreen
 from datetime import date, datetime
 from textual.app import ComposeResult
 from textual.screen import Screen
@@ -365,10 +366,14 @@ class HelpScreen(Screen):
                 "│  Actions:                                │\n"
                 "│    T  -  Cycle through themes            │\n"
                 "│    H  -  Toggle history panel            │\n"
+                "│    V  -  Detailed history view           │\n"
                 "│    M  -  Monthly calendar view           │\n"
                 "│    E  -  Export data                     │\n"
                 "│    ?  -  Show this help dialog           │\n"
                 "│    Q  -  Quit application                │\n"
+                "│                                          │\n"
+                "│  Easter Eggs:                            │\n"
+                "│    Type C-H-A-O-S for chaos mode 🔥      │\n"
                 "│                                          │\n"
                 "│  Press ESC or Q to close this dialog     │\n"
                 "│                                          │\n"
@@ -466,9 +471,64 @@ class ToastNotification(Static):
         
         self.styles.visibility = "hidden"
 
+# Dramatic mood confirmations
+DRAMATIC_CONFIRMATIONS = {
+    9: [  # Great
+        "✨ peak slay ✨",
+        "THRIVING ENERGY DETECTED",
+        "Main character moment!",
+        "That's what we like to see! 🌟",
+    ],
+    7: [  # Good
+        "Not bad, not bad.",
+        "Solid vibes today 👍",
+        "We love to see it!",
+        "Good energy detected ✨",
+    ],
+    5: [  # Meh
+        "Emotionally beige accepted.",
+        "Surviving counts 🤷",
+        "Meh is valid too.",
+        "Neutral vibes logged.",
+    ],
+    3: [  # Bad
+        "Logging one certified 'ugh' day.",
+        "Rough day noted 😤",
+        "This too shall pass, friend.",
+        "Oof. Logged. 💙",
+    ],
+    1: [  # Awful
+        "Oh, babe. Logging emergency vibes. 💔",
+        "I see you struggling. Logged. 🫂",
+        "Sending virtual support 💜",
+        "We're here with you. 🌙",
+    ],
+}
+
+def get_dramatic_confirmation(score: int) -> str:
+    """Get a dramatic confirmation message for the given mood score."""
+    # Find the closest mood category
+    if score >= 9:
+        key = 9
+    elif score >= 7:
+        key = 7
+    elif score >= 5:
+        key = 5
+    elif score >= 3:
+        key = 3
+    else:
+        key = 1
+    
+    return random.choice(DRAMATIC_CONFIRMATIONS[key])
+
+# Glitch faces for chaos moments
+GLITCH_FACES = ["(⊙_☉)", "(◉_◎)", "(⊙﹏⊙)", "(◉‿◎)"]
+
 class MainScreen(Screen):
     """Single-screen UI that matches the ASCII mockup."""
     show_history = True
+    chaos_mode = False  # Chaos mode easter egg
+    chaos_sequence = []  # Track key sequence for chaos activation
     _mood_widgets = []  # Track mood option widgets
     _history_bars = []  # Track history bar widgets
 
@@ -567,7 +627,15 @@ class MainScreen(Screen):
         self.selected_index = self.preferences.last_selected_mood_index # Restore last selected mood
         self.show_history = self.preferences.show_history_panel
         self.sound_manager = SoundManager()
-
+        
+        # Initialize chaos mode tracking
+        self.chaos_mode = False
+        self.chaos_sequence = []
+        self.glitch_active = False
+        
+        # Random glitch moment (5-10% chance)
+        if random.random() < 0.08:
+            self.glitch_active = True
 
         self.theme_names = list(THEMES.keys())          # Set up theme system using saved preference
         try:
@@ -588,6 +656,20 @@ class MainScreen(Screen):
     async def on_key(self, event: events.Key) -> None:
         """Handle keyboard input for navigation and actions."""
         key = event.key.lower()
+        
+        # Track chaos mode sequence (C-H-A-O-S)
+        if key in ['c', 'h', 'a', 'o', 's']:
+            self.chaos_sequence.append(key)
+            # Keep only last 5 keys
+            self.chaos_sequence = self.chaos_sequence[-5:]
+            # Check if sequence matches "chaos"
+            if self.chaos_sequence == ['c', 'h', 'a', 'o', 's']:
+                self.chaos_mode = not self.chaos_mode
+                self.chaos_sequence = []  # Reset sequence
+                chaos_msg = "🔥 CHAOS MODE: ON 🔥" if self.chaos_mode else "Chaos mode: OFF (calm restored)"
+                asyncio.create_task(self.toast.show(chaos_msg, self.palette))
+                self.render_view()
+                return
 
         if key in ("up", "k"):
             old_index = self.selected_index
@@ -630,6 +712,10 @@ class MainScreen(Screen):
             self.preferences.show_history_panel = self.show_history
             save_preferences(self.preferences)
             self.render_view()
+        
+        elif key == "v":
+            # Open detailed history screen
+            self.app.push_screen(DetailedHistoryScreen(self.palette, self.border_style))
 
         elif key == "question_mark":
             self._show_help_dialog()
@@ -655,8 +741,9 @@ class MainScreen(Screen):
         for content, style in self._build_mood_section_lines():
             lines.append(self._wrap_in_box(content, style, padding))
 
-        # Generate and apply section divider dynamically
-        divider = self._create_section_divider("Mood History")
+        # Generate and apply section divider dynamically with playful text
+        divider_text = "Mood History — your emotional stock chart 📈📉" if not self.chaos_mode else "Mood History — CHAOTIC EDITION 🔥"
+        divider = self._create_section_divider(divider_text)
         lines.append(self._apply_padding(self._apply_border_color(divider), padding))
 
         # Render history section if enabled
@@ -667,6 +754,9 @@ class MainScreen(Screen):
         # Generate and apply bottom border dynamically
         bottom_border = self._create_bottom_border()
         lines.append(self._apply_padding(self._apply_border_color(bottom_border), padding))
+        
+        # Add status strip
+        lines.append(self._build_status_strip(padding))
 
         self.main_view.update("\n".join(lines))
 
@@ -696,6 +786,30 @@ class MainScreen(Screen):
         color = style or self.palette.text_primary
         return f"[{color}]{line}[/{color}]"
     
+    def _get_mood_color(self, score: int) -> str:
+        """Get consistent color for mood score."""
+        if score >= 9:  # Great
+            return "#00ff00"  # Bright green
+        elif score >= 7:  # Good
+            return "#00ffff"  # Cyan
+        elif score >= 5:  # Meh
+            return "#ffff00"  # Yellow
+        elif score >= 3:  # Bad
+            return "#ff6600"  # Orange
+        else:  # Awful
+            return "#ff0000"  # Bright red
+    
+    def _build_status_strip(self, padding: int) -> str:
+        """Build the status strip at the bottom."""
+        entries = load_moods()
+        entry_count = len(entries)
+        theme_name = self._current_theme_name().replace("_", " ").title()
+        chaos_status = "ON 🔥" if self.chaos_mode else "OFF"
+        
+        status = f"theme: {theme_name} | chaos: {chaos_status} | entries: {entry_count}"
+        colored_status = f"[{self.palette.text_muted}]{status}[/]"
+        return self._apply_padding(colored_status, padding)
+    
     def _build_mood_section_lines(self) -> list[tuple[str, str | None]]:
         """Build the lines for the top 'How are you feeling?' section."""
         today_str = date.today().isoformat()
@@ -712,13 +826,15 @@ class MainScreen(Screen):
         )
         lines.append(("", None))
 
-        for idx, (label, _score) in enumerate(MOOD_OPTIONS):        # Mood options
+        for idx, (label, score) in enumerate(MOOD_OPTIONS):        # Mood options
             marker = "(x)" if idx == self.selected_index else "( )"
+            # Color-coded moods with consistent colors
+            mood_color = self._get_mood_color(score)
             # Enhanced styling for selected option with pulse effect
             if idx == self.selected_index:
-                style = f"bold {self.palette.accent_high}"
+                style = f"bold {mood_color}"
             else:
-                style = self.palette.text_primary
+                style = mood_color
             lines.append((f"  {marker} {label}", style))
 
         while len(lines) < 11:                  # Pad to stable height
@@ -763,12 +879,15 @@ class MainScreen(Screen):
             # Build the bar as plain text first - no color tags yet
             bar = "█" * bar_length
             
+            # Add note indicator if present
+            note_indicator = " ✏️" if entry.note else ""
+            
             # Create the complete line content as plain text
             # This ensures width calculations are accurate
-            line_text = f"{date_str}: {ascii_face:<4} {bar}"
+            line_text = f"{date_str}: {ascii_face:<4} {bar}{note_indicator}"
             
-            # Determine the color for the bar based on score
-            bar_color = self._bar_color_for_score(entry.score)
+            # Use consistent color coding for mood scores
+            bar_color = self._get_mood_color(entry.score)
             
             # Now we can append with the color as the style parameter
             # The _wrap_in_box method will apply this color to the whole line
@@ -778,10 +897,14 @@ class MainScreen(Screen):
             lines.append(("", None))
 
         lines.append(("", None))
-        lines.append(
-            ("              lower ←──────────── mood →────────────→ higher",
-             self.palette.accent_low)
-        )
+        
+        # Glitch effect: occasionally invert the direction label
+        if self.glitch_active and random.random() < 0.3:
+            direction_text = "              higher ←──────────── mood →────────────→ lower"
+        else:
+            direction_text = "              lower ←──────────── mood →────────────→ higher"
+        
+        lines.append((direction_text, self.palette.accent_low))
         lines.append(("", None))
 
         return lines
@@ -829,11 +952,20 @@ class MainScreen(Screen):
         self.preferences.current_theme = self.theme_names[self.theme_index]
         save_preferences(self.preferences)
         
+        # Random glitch moment on theme change (5-10% chance)
+        if random.random() < 0.08:
+            self.glitch_active = not self.glitch_active
+        
         # Show the theme mascot popup!
         theme_name = self._current_theme_name()
         # Convert snake_case to Title Case for display
         display_name = ' '.join(word.capitalize() for word in theme_name.split('_'))
         mascot_art = THEME_MASCOTS.get(display_name, "No mascot available")
+        
+        # Occasionally show glitchy mascot
+        if self.glitch_active and random.random() < 0.3:
+            mascot_art = random.choice(GLITCH_FACES)
+        
         self.app.push_screen(ThemeMascotPopup(display_name, mascot_art, self.palette))
         
         # Update the mood companion with current theme
@@ -886,12 +1018,14 @@ class MainScreen(Screen):
         self.preferences.last_selected_mood_index = self.selected_index
         save_preferences(self.preferences)
 
-        # Show animated toast notification
+        # Show animated toast notification with dramatic confirmation
         emoji = self._ascii_for_score(score)
+        dramatic = get_dramatic_confirmation(score)
+        
         if note_text:
-            message = f"✓ Mood saved! You picked {emoji} {label} today (with note)"
+            message = f"✓ SYSTEM: {dramatic}\n{emoji} {label} logged (with note)"
         else:
-            message = f"✓ Mood saved! You picked {emoji} {label} today"
+            message = f"✓ SYSTEM: {dramatic}\n{emoji} {label} logged"
         
         # Trigger toast animation
         asyncio.create_task(self.toast.show(message, self.palette))

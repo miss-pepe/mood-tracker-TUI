@@ -1,0 +1,23 @@
+/* Detailed History Screen Styles */
+
+#history-container {
+    width: 100%;
+    height: 100%;
+    background: $background;
+}
+
+#history-header {
+    width: 100%;
+    padding: 1;
+    text-align: center;
+}
+
+#history-scroll {
+    width: 100%;
+    height: 100%;
+    padding: 1 2;
+}
+
+#history-content {
+    width: 100%;
+}
