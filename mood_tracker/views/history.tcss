@@ -1,0 +1,27 @@
+HistoryScreen {
+    align: center middle;
+}
+
+#history-container {
+    width: 90%;
+    height: 90%;
+    border: solid $accent;
+    padding: 1;
+}
+
+#history-title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#stats-panel {
+    text-align: center;
+    margin-bottom: 1;
+    color: $text-muted;
+}
+
+DataTable {
+    height: 1fr;
+    border: solid $secondary;
+}

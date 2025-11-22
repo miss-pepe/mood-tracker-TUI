@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .reflection import ReflectionPromptScreen
 from .export import ExportScreen
+from .history import HistoryScreen
 from .theme_mascot_popup import ThemeMascotPopup
 from datetime import date, datetime
 from textual.app import ComposeResult
@@ -13,6 +14,7 @@ from ..models.preferences import load_preferences, save_preferences, UserPrefere
 from .calendar import MonthlyCalendarScreen
 from ..audio import SoundManager
 from ..widgets.mood_companion import MoodCompanion
+from ..constants import MOOD_OPTIONS
 from textual import work
 import asyncio
 import random
@@ -22,14 +24,6 @@ MIN_BOX_WIDTH = 100                 # Minimum box width
 MAX_BOX_WIDTH = 140                 # Maximum box width
 BOX_WIDTH = 125                     # Default/preferred box width
 INNER_WIDTH = BOX_WIDTH - 2
-
-MOOD_OPTIONS = [                      # Mood options as (label_for_ui, numeric_score_to_save)
-    (":D  Great", 9),
-    (":)  Good", 7),
-    (":|  Meh", 5),
-    (":(  Bad", 3),
-    (":'( Awful", 1),
-]
 
 THEME_MASCOTS = {                                   
     "Neon Midnight": """    ✨ ⭐
@@ -380,48 +374,291 @@ class HelpScreen(Screen):
         """Close the help dialog and return to main screen."""
         self.app.pop_screen()
 
+class BorderRow(Static):
+    """A generic row with borders."""
+    def __init__(self, content: str, border_style, palette, style: str = None, centered: bool = False, id: str = None):
+        super().__init__(id=id)
+        self.content_text = content
+        self.border_style = border_style
+        self.palette = palette
+        self.custom_text_style = style
+        self.centered = centered
+        self.render_content()
+
+    def render_content(self):
+        inner_width = INNER_WIDTH
+        if self.centered:
+            content = self.content_text.center(inner_width)
+        else:
+            content = self.content_text.ljust(inner_width)
+        
+        color = self.custom_text_style or self.palette.text_primary
+        # Apply color to content with padding
+        content = f" {content} "
+        content = f"[{color}]{content}[/]"
+        
+        # Border
+        border_color = self.border_style.border_color
+        line = f"[{border_color}]{self.border_style.vertical}[/]{content}[{border_color}]{self.border_style.vertical}[/]"
+        self.update(line)
+
+    def update_content(self, content: str, style: str = None):
+        self.content_text = content
+        if style:
+            self.custom_text_style = style
+        self.render_content()
+
+class SectionDivider(Static):
+    def __init__(self, label: str, border_style):
+        super().__init__()
+        self.label = label
+        self.border_style = border_style
+        self.render_content()
+
+    def render_content(self):
+        label_with_spaces = f" {self.label} "
+        remaining = INNER_WIDTH - len(label_with_spaces)
+        left_dashes = remaining // 2
+        right_dashes = remaining - left_dashes
+        
+        b = self.border_style
+        line = (
+            f"{b.divider_left}"
+            f"{b.divider_horizontal * left_dashes}"
+            f"{label_with_spaces}"
+            f"{b.divider_horizontal * right_dashes}"
+            f"{b.divider_right}"
+        )
+        self.update(f"[{b.border_color}]{line}[/]")
+
+class TopBorder(Static):
+    def __init__(self, border_style):
+        super().__init__()
+        self.border_style = border_style
+        self.render_content()
+        
+    def render_content(self):
+        b = self.border_style
+        line = f"{b.top_left}{b.horizontal * INNER_WIDTH}{b.top_right}"
+        self.update(f"[{b.border_color}]{line}[/]")
+
+class BottomBorder(Static):
+    def __init__(self, border_style):
+        super().__init__()
+        self.border_style = border_style
+        self.render_content()
+
+    def render_content(self):
+        b = self.border_style
+        line = f"{b.bottom_left}{b.horizontal * INNER_WIDTH}{b.bottom_right}"
+        self.update(f"[{b.border_color}]{line}[/]")
+
 class MoodOption(Static):
     """Individual mood option widget with animation support."""
     
-    def __init__(self, label: str, score: int, is_selected: bool = False, palette=None):
+    def __init__(self, label: str, score: int, border_style, palette, is_selected: bool = False, centered: bool = True):
         super().__init__()
         self.label = label
         self.score = score
-        self.is_selected = is_selected
+        self.border_style = border_style
         self.palette = palette
-        self._render()
+        self.is_selected = is_selected
+        self.centered = centered
+        self.render_content()
     
-    def _render(self):
+    def render_content(self):
         """Render the mood option with appropriate styling."""
         marker = "(x)" if self.is_selected else "( )"
-        if self.is_selected and self.palette:
-            self.update(f"[bold {self.palette.accent_high}]  {marker} {self.label}[/]")
+        
+        content = f"{marker} {self.label}"
+        if self.centered:
+            content = content.center(INNER_WIDTH)
         else:
-            self.update(f"  {marker} {self.label}")
+            content = content.ljust(INNER_WIDTH)
+        # Add padding
+        content = f" {content} "
+        
+        if self.is_selected:
+            content = f"[bold {self.palette.accent_high}]{content}[/]"
+        else:
+            content = f"[{self.palette.text_primary}]{content}[/]"
+            
+        border_color = self.border_style.border_color
+        line = f"[{border_color}]{self.border_style.vertical}[/]{content}[{border_color}]{self.border_style.vertical}[/]"
+        self.update(line)
     
-    def highlight(self, palette):
-        """Animate highlighting this option."""
-        self.is_selected = True
+    def set_selected(self, selected: bool, color: str = None):
+        self.is_selected = selected
+        # We can use the color if provided
+        marker = "(x)" if self.is_selected else "( )"
+        content = f"{marker} {self.label}"
+        if self.centered:
+            content = content.center(INNER_WIDTH)
+        else:
+            content = content.ljust(INNER_WIDTH)
+        # Add padding
+        content = f" {content} "
+        
+        if self.is_selected:
+            c = color if color else self.palette.accent_high
+            content = f"[bold {c}]{content}[/]"
+            # Pulse animation
+            self.styles.animate("opacity", value=1.0, duration=0.15, easing="out_cubic")
+        else:
+            # Dim slightly
+            c = color if color else self.palette.text_primary
+            content = f"[{c}]{content}[/]"
+            
+        border_color = self.border_style.border_color
+        line = f"[{border_color}]{self.border_style.vertical}[/]{content}[{border_color}]{self.border_style.vertical}[/]"
+        self.update(line)
+
+class TimelineEntry(Static):
+    """Single mood entry in a timeline card."""
+    
+    def __init__(self, time_str: str, mood_label: str, bar_length: int, color: str, border_style, palette, frequency_str: str = None):
+        super().__init__()
+        self.time_str = time_str
+        self.mood_label = mood_label
+        self.bar_length = bar_length
+        self.color = color
+        self.border_style = border_style
         self.palette = palette
-        self._render()
-        # Pulse animation on selection
-        self.styles.animate("opacity", value=1.0, duration=0.15, easing="out_cubic")
+        self.frequency_str = frequency_str
+        self._update_display()
     
-    def dim(self):
-        """Dim this option when deselected."""
-        self.is_selected = False
-        self._render()
-        self.styles.opacity = 0.7
+    def _update_display(self):
+        """Update the entry display."""
+        # Add spacing between bar blocks
+        bar_blocks = " ".join(["█" for _ in range(self.bar_length)])
+        
+        # Build line with frequency if available
+        if self.frequency_str:
+            line_text = f"{self.time_str:<9}  {bar_blocks:<20}  {self.mood_label:<8}  [{self.frequency_str}]"
+        else:
+            line_text = f"{self.time_str:<9}  {bar_blocks:<20}  {self.mood_label}"
+        
+        # Pad and border
+        content = line_text.ljust(INNER_WIDTH - 2)
+        content = f" {content} "
+        content = f"[{self.color}]{content}[/]"
+        
+        border_color = self.border_style.border_color
+        line = f"[{border_color}]{self.border_style.vertical}[/]{content}[{border_color}]{self.border_style.vertical}[/]"
+        self.update(line)
+
+
+class TimelineCardTop(Static):
+    """Top border of a timeline card."""
+    
+    def __init__(self, border_style):
+        super().__init__()
+        self.border_style = border_style
+        self.render_content()
+    
+    def render_content(self):
+        b = self.border_style
+        # Use box drawing characters for card top
+        line = f"{b.top_left}{b.horizontal * (INNER_WIDTH - 2)}{b.top_right}"
+        self.update(f"[{b.border_color}]{line}[/]")
+
+
+class TimelineCardBottom(Static):
+    """Bottom border of a timeline card."""
+    
+    def __init__(self, border_style):
+        super().__init__()
+        self.border_style = border_style
+        self.render_content()
+    
+    def render_content(self):
+        b = self.border_style
+        # Use box drawing characters for card bottom
+        line = f"{b.bottom_left}{b.horizontal * (INNER_WIDTH - 2)}{b.bottom_right}"
+        self.update(f"[{b.border_color}]{line}[/]")
+
+
+class TimelineDateHeader(Static):
+    """Date header for timeline cards."""
+    
+    def __init__(self, date_str: str, border_style, palette):
+        super().__init__()
+        self.date_str = date_str
+        self.border_style = border_style
+        self.palette = palette
+        self.render_content()
+    
+    def render_content(self):
+        line_text = f"{self.date_str}"
+        content = line_text.ljust(INNER_WIDTH)
+        content = f" {content} "
+        content = f"[bold {self.palette.accent_high}]{content}[/]"
+        
+        border_color = self.border_style.border_color
+        line = f"[{border_color}]{self.border_style.vertical}[/]{content}[{border_color}]{self.border_style.vertical}[/]"
+        self.update(line)
+
+
+class HorizontalMoodSelector(Static):
+    """Horizontal mood selector with color-coded options."""
+    
+    def __init__(self, border_style, palette, selected_index: int = 0):
+        super().__init__()
+        self.border_style = border_style
+        self.palette = palette
+        self.selected_index = selected_index
+        self.render_content()
+    
+    def render_content(self):
+        # Build mood options with colors
+        options = []
+        colors = ["bright_green", "cyan", "yellow", "magenta", "bright_red"]
+        labels = ["Great", "Good", "Meh", "Bad", "Awful"]
+        
+        # Calculate visible text length (without markup)
+        visible_parts = []
+        for idx, (label, color) in enumerate(zip(labels, colors)):
+            if idx == self.selected_index:
+                # Selected option: bold and underlined with arrow
+                options.append(f"[{color} bold underline]► {label} ◄[/]")
+                visible_parts.append(f"► {label} ◄")
+            else:
+                options.append(f"[{color}]■ {label}[/]")
+                visible_parts.append(f"■ {label}")
+        
+        selector_text = "  ".join(options)
+        visible_text = "  ".join(visible_parts)
+        
+        # Calculate padding needed for centering
+        visible_length = len(visible_text)
+        padding_needed = max(0, (INNER_WIDTH - visible_length) // 2)
+        padding = " " * padding_needed
+        
+        content = f"{padding}{selector_text}"
+        content = content.ljust(INNER_WIDTH)
+        content = f" {content} "
+        
+        border_color = self.border_style.border_color
+        line = f"[{border_color}]{self.border_style.vertical}[/]{content}[{border_color}]{self.border_style.vertical}[/]"
+        self.update(line)
+    
+    def set_selected(self, index: int):
+        """Update the selected mood index."""
+        self.selected_index = index
+        self.render_content()
+
 
 class HistoryBar(Static):
     """Animated history bar widget."""
     
-    def __init__(self, date_str: str, ascii_face: str, final_length: int, color: str):
+    def __init__(self, date_str: str, ascii_face: str, final_length: int, color: str, border_style, palette):
         super().__init__()
         self.date_str = date_str
         self.ascii_face = ascii_face
         self.final_length = final_length
         self.color = color
+        self.border_style = border_style
+        self.palette = palette
         self.current_length = 0
         self._update_display()
     
@@ -429,11 +666,22 @@ class HistoryBar(Static):
         """Update the bar display."""
         bar = "█" * self.current_length
         line_text = f"{self.date_str}: {self.ascii_face:<4} {bar}"
-        self.update(f"[{self.color}]{line_text}[/]")
+        
+        # Pad and border
+        content = line_text.ljust(INNER_WIDTH)
+        # Add padding
+        content = f" {content} "
+        content = f"[{self.color}]{content}[/]"
+        
+        border_color = self.border_style.border_color
+        line = f"[{border_color}]{self.border_style.vertical}[/]{content}[{border_color}]{self.border_style.vertical}[/]"
+        self.update(line)
     
     async def animate_growth(self):
         """Gradually grow the bar to its final length."""
         step = max(1, self.final_length // 10)  # Grow in ~10 steps
+        # Reset to 0 before animating
+        self.current_length = 0
         while self.current_length < self.final_length:
             self.current_length = min(self.current_length + step, self.final_length)
             self._update_display()
@@ -469,6 +717,7 @@ class ToastNotification(Static):
 class MainScreen(Screen):
     """Single-screen UI that matches the ASCII mockup."""
     show_history = True
+    show_extended_history = False  # Toggle between 12 entries and all entries
     _mood_widgets = []  # Track mood option widgets
     _history_bars = []  # Track history bar widgets
 
@@ -546,280 +795,236 @@ class MainScreen(Screen):
         self.app.push_screen(HelpScreen())
 
     def compose(self) -> ComposeResult:
+        self.preferences = load_preferences()
+        self.theme_names = list(THEMES.keys())
+        try:
+            self.theme_index = self.theme_names.index(self.preferences.current_theme)
+        except ValueError:
+            self.theme_index = self.theme_names.index(DEFAULT_THEME_NAME)
+        
+        self.palette = get_palette(self.theme_names[self.theme_index])
+        self.border_style = get_border_style(self.theme_names[self.theme_index])
+        self.selected_index = self.preferences.last_selected_mood_index
+        self.show_history = self.preferences.show_history_panel
+        self.sound_manager = SoundManager()
+
         from textual.containers import Vertical
         
-        # Main container for layout
         with Vertical():
-            # Mood companion at the top
             self.mood_companion = MoodCompanion(initial_score=5)
+            self.mood_companion.palette = self.palette
             yield self.mood_companion
             
-            # Main mood tracker view
-            self.main_view = Static(id="main-view")
-            yield self.main_view
+            with Vertical(id="box-container"):
+                yield TopBorder(self.border_style)
+                
+                today_str = date.today().isoformat()
+                yield BorderRow(f"Date: {today_str}", self.border_style, self.palette, centered=True)
+                yield BorderRow("", self.border_style, self.palette)
+                
+                yield BorderRow("How are you feeling today?", self.border_style, self.palette, style=f"bold {self.palette.accent_high}", centered=True)
+                yield BorderRow("", self.border_style, self.palette)
+                yield BorderRow("[←/→ to select, Enter to confirm]", self.border_style, self.palette, style=self.palette.text_muted, centered=True)
+                yield BorderRow("", self.border_style, self.palette)
+                
+                # Horizontal Mood Selector
+                self.horizontal_selector = HorizontalMoodSelector(self.border_style, self.palette, self.selected_index)
+                yield self.horizontal_selector
+                
+                # Keep mood_options list for compatibility
+                self.mood_options = []
+                
+                yield BorderRow("", self.border_style, self.palette)
+                yield BorderRow("", self.border_style, self.palette)
+                
+                # History Section
+                self.history_divider = SectionDivider("Mood History", self.border_style)
+                yield self.history_divider
+                
+                with Vertical(id="history-list"):
+                    pass
+                
+                self.history_footer = BorderRow("", self.border_style, self.palette, style=self.palette.accent_low, id="history-footer", centered=True)
+                yield self.history_footer
+                yield BorderRow("", self.border_style, self.palette)
+                yield BorderRow("", self.border_style, self.palette)
+                
+                yield BottomBorder(self.border_style)
             
-            # Toast notification at the bottom
             self.toast = ToastNotification()
             yield self.toast
 
     def on_mount(self) -> None:
-        self.preferences = load_preferences()           # Load user preferences from disk
-        self.selected_index = self.preferences.last_selected_mood_index # Restore last selected mood
-        self.show_history = self.preferences.show_history_panel
-        self.sound_manager = SoundManager()
-
-
-        self.theme_names = list(THEMES.keys())          # Set up theme system using saved preference
-        try:
-            self.theme_index = self.theme_names.index(self.preferences.current_theme)
-        except ValueError:
-            self.theme_index = self.theme_names.index(DEFAULT_THEME_NAME)         # If saved theme doesn't exist, fall back to default
-
-        self.palette = get_palette(self.theme_names[self.theme_index])
-        self.border_style = get_border_style(self.theme_names[self.theme_index])
-        
-        # Initialize mood companion with current palette and selected mood
+        # Initialize mood companion
         _, initial_score = MOOD_OPTIONS[self.selected_index]
-        self.mood_companion.palette = self.palette
         self.mood_companion.update_mood(initial_score)
         
-        self.render_view()
+        # Ensure history is visible by default
+        self.show_history = True
+        self._refresh_history()
+        self._update_history_visibility()
 
     async def on_key(self, event: events.Key) -> None:
         """Handle keyboard input for navigation and actions."""
         key = event.key.lower()
 
-        if key in ("up", "k"):
-            old_index = self.selected_index
-            self.selected_index = (self.selected_index - 1) % len(MOOD_OPTIONS)
-            self.preferences.last_selected_mood_index = self.selected_index
-            save_preferences(self.preferences)
-            self.sound_manager.play_selection()
-            # Update mood companion
-            if hasattr(self, 'mood_companion'):
-                _, score = MOOD_OPTIONS[self.selected_index]
-                self.mood_companion.update_mood(score)
-            # Animate the mood option change
-            self._animate_mood_selection_change(old_index, self.selected_index)
-            self.render_view()
+        if key in ("left", "h"):
+            self._change_selection(-1)
 
-        elif key in ("down", "j"):
-            old_index = self.selected_index
-            self.selected_index = (self.selected_index + 1) % len(MOOD_OPTIONS)
-            self.preferences.last_selected_mood_index = self.selected_index
-            save_preferences(self.preferences)
-            self.sound_manager.play_selection()
-            # Update mood companion
-            if hasattr(self, 'mood_companion'):
-                _, score = MOOD_OPTIONS[self.selected_index]
-                self.mood_companion.update_mood(score)
-            # Animate the mood option change
-            self._animate_mood_selection_change(old_index, self.selected_index)
-            self.render_view()
+        elif key in ("right", "l"):
+            self._change_selection(1)
 
         elif key == "enter" or key == "s":
-        # Call the worker method without await
-        # The @work decorator handles spawning it in the right context
             self._save_current_mood()
 
         elif key == "t":
             self._cycle_theme()
 
         elif key == "h":
-            self.show_history = not self.show_history
-            self.preferences.show_history_panel = self.show_history
-            save_preferences(self.preferences)
-            self.render_view()
+            # Toggle extended history view (12 vs all entries)
+            self.show_extended_history = not self.show_extended_history
+            self._refresh_history()
+            
+            # Toggle footer visibility too
+            if self.history_footer.styles.display == "block":
+                self.history_footer.styles.display = "none"
+            else:
+                self.history_footer.styles.display = "block"
 
         elif key == "question_mark":
-            self._show_help_dialog()
+            self.app.push_screen(HelpScreen())
 
         elif key == "e":
             self.app.push_screen(ExportScreen(self.palette))
 
+        elif key == "v":
+            self.app.push_screen(HistoryScreen())
+
         elif key == "m":
             self.app.push_screen(MonthlyCalendarScreen(self.palette, self.border_style))
-    # ---------------- Rendering helpers ----------------
 
-    def render_view(self) -> None:
-        """Rebuild the full UI by composing all sections together."""
-        padding = self._get_centered_padding()
-
-        lines = []
+    def _change_selection(self, delta: int):
+        old_index = self.selected_index
+        self.selected_index = (self.selected_index + delta) % len(MOOD_OPTIONS)
+        self.preferences.last_selected_mood_index = self.selected_index
+        save_preferences(self.preferences)
+        self.sound_manager.play_selection()
         
-        # Generate and apply top border dynamically from current theme
-        top_border = self._create_top_border()
-        lines.append(self._apply_padding(self._apply_border_color(top_border), padding))
+        # Update mood companion
+        _, score = MOOD_OPTIONS[self.selected_index]
+        self.mood_companion.update_mood(score)
+        
+        # Update horizontal selector
+        self.horizontal_selector.set_selected(self.selected_index)
 
-        # Render mood selection section
-        for content, style in self._build_mood_section_lines():
-            lines.append(self._wrap_in_box(content, style, padding))
-
-        # Generate and apply section divider dynamically
-        divider = self._create_section_divider("Mood History")
-        lines.append(self._apply_padding(self._apply_border_color(divider), padding))
-
-        # Render history section if enabled
+    def _update_history_visibility(self):
+        history_list = self.query_one("#history-list")
+        
         if self.show_history:
-            for content, style in self._build_history_section_lines():
-                lines.append(self._wrap_in_box(content, style, padding))
+            self.history_divider.styles.display = "block"
+            history_list.styles.display = "block"
+            self.history_footer.styles.display = "block"
+        else:
+            self.history_divider.styles.display = "none"
+            history_list.styles.display = "none"
+            self.history_footer.styles.display = "none"
 
-        # Generate and apply bottom border dynamically
-        bottom_border = self._create_bottom_border()
-        lines.append(self._apply_padding(self._apply_border_color(bottom_border), padding))
-
-        self.main_view.update("\n".join(lines))
-
-    def _wrap_in_box(self, content: str, style: str | None = None, padding: int = 0) -> str:
-        """Wrap content in themed vertical borders."""
-        padded_content = content.ljust(INNER_WIDTH)
-        # Use the current theme's vertical border character
-        vertical = self.border_style.vertical
-        line = f"{vertical}{padded_content}{vertical}"
-        colored_line = self._colorize(line, style)
-        return self._apply_padding(colored_line, padding)
-
-    def _colorize(self, line: str, style: str | None = None) -> str:
-        """Apply Textual color/style markup to a line.
-    
-        This is a convenience wrapper that applies color tags to text.
-        If no style is provided, it uses the theme's default text color.
-    
-        Args:
-            line: Text to colorize
-            style: Optional Textual style string (e.g., "bold red", "#ff00ff")
-               If None, uses the theme's primary text color.
-    
-        Returns:
-            Line wrapped in Textual color markup tags
-        """
-        color = style or self.palette.text_primary
-        return f"[{color}]{line}[/{color}]"
-    
-    def _build_mood_section_lines(self) -> list[tuple[str, str | None]]:
-        """Build the lines for the top 'How are you feeling?' section."""
-        today_str = date.today().isoformat()
-
-        lines: list[tuple[str, str | None]] = []
-        lines.append((f"Date: {today_str}", self.palette.text_primary))
-        lines.append(("", None))
-        lines.append(("How are you feeling today?", f"bold {self.palette.accent_high}"))
-        lines.append(("", None))
-        lines.append(("  [↑/↓ to select, Enter to confirm]", self.palette.text_muted))
-        lines.append(
-            (f"  Theme: {self._current_theme_name().title()} (press T to change)",
-             self.palette.accent_low)
-        )
-        lines.append(("", None))
-
-        for idx, (label, _score) in enumerate(MOOD_OPTIONS):        # Mood options
-            marker = "(x)" if idx == self.selected_index else "( )"
-            # Enhanced styling for selected option with pulse effect
-            if idx == self.selected_index:
-                style = f"bold {self.palette.accent_high}"
-            else:
-                style = self.palette.text_primary
-            lines.append((f"  {marker} {label}", style))
-
-        while len(lines) < 11:                  # Pad to stable height
-            lines.append(("", None))
-
-        return lines
-
-    def _build_history_section_lines(self) -> list[tuple[str, str | None]]:
-        """Build the lines for the bottom 'Mood History' section.
-        
-        The key here is to keep the content and styling separate so that
-        width calculations work correctly. We build plain text content first,
-        let it get padded to the right width, and then the _wrap_in_box
-        method handles applying colors uniformly.
-        """
-
+    def _refresh_history(self) -> None:
+        """Refresh the history list with grouped timeline cards."""
         entries = load_moods()
-
-        if not entries:
-            return [
-                ("", None),
-                ("No mood history yet. Log something above to get started.",
-                 f"dim {self.palette.text_muted}"),
-                ("", None),
-                ("              lower ←──────────── mood →────────────→ higher",
-                 self.palette.accent_low),
-                ("", None),
-            ]
-
-        last_entries = entries[-5:]
-        max_score = max(entry.score for entry in last_entries)
-
-        lines: list[tuple[str, str | None]] = []
+        history_list = self.query_one("#history-list")
+        history_list.remove_children()
         
-        for entry in last_entries:
-            date_str = entry.timestamp.strftime("%m-%d")
-            ascii_face = self._ascii_for_score(entry.score)
-            bar_length = self._calculate_scaled_bar_length(
-                entry.score, max_score, max_bar_width=30
+        if not entries:
+            history_list.mount(
+                BorderRow("No mood history yet. Log something above to get started.", 
+                         self.border_style, self.palette, 
+                         style=f"dim {self.palette.text_muted}", centered=True)
             )
+            self._update_history_footer(entries)
+            return
+        
+        # Show last 12 entries (or all if extended view)
+        display_count = len(entries) if self.show_extended_history else 12
+        last_entries = entries[-display_count:]
+        
+        # Group entries by date
+        from collections import defaultdict
+        entries_by_date = defaultdict(list)
+        for entry in last_entries:
+            date_key = entry.timestamp.strftime("%b %d")  # "Nov 22"
+            entries_by_date[date_key].append(entry)
+        
+        # Render grouped timeline cards
+        for date_str in entries_by_date.keys():
+            # Date header
+            history_list.mount(TimelineDateHeader(date_str, self.border_style, self.palette))
             
-            # Build the bar as plain text first - no color tags yet
-            bar = "█" * bar_length
+            # Card top border
+            history_list.mount(TimelineCardTop(self.border_style))
             
-            # Create the complete line content as plain text
-            # This ensures width calculations are accurate
-            line_text = f"{date_str}: {ascii_face:<4} {bar}"
+            # Each mood entry for this day
+            day_entries = entries_by_date[date_str]
+            for idx, entry in enumerate(day_entries):
+                time_str = entry.timestamp.strftime("%I:%M %p")  # "08:00 AM"
+                mood_label = self._label_for_score(entry.score)
+                bar_length = self._fixed_bar_length_for_score(entry.score)
+                color = self._bar_color_for_score(entry.score)
+                
+                # Calculate frequency (time since previous entry)
+                frequency_str = None
+                if idx > 0:
+                    prev_entry = day_entries[idx - 1]
+                    time_gap = (entry.timestamp - prev_entry.timestamp).total_seconds()
+                    frequency_str = self._format_time_gap(time_gap)
+                elif len(last_entries) > len(day_entries):
+                    # Check if there's a previous entry from another day
+                    entry_index = last_entries.index(entry)
+                    if entry_index > 0:
+                        prev_entry = last_entries[entry_index - 1]
+                        time_gap = (entry.timestamp - prev_entry.timestamp).total_seconds()
+                        frequency_str = self._format_time_gap(time_gap)
+                
+                timeline_entry = TimelineEntry(time_str, mood_label, bar_length, color,
+                                              self.border_style, self.palette, frequency_str)
+                history_list.mount(timeline_entry)
             
-            # Determine the color for the bar based on score
-            bar_color = self._bar_color_for_score(entry.score)
+            # Card bottom border
+            history_list.mount(TimelineCardBottom(self.border_style))
             
-            # Now we can append with the color as the style parameter
-            # The _wrap_in_box method will apply this color to the whole line
-            lines.append((line_text, bar_color))
-
-        while len(lines) < 5:
-            lines.append(("", None))
-
-        lines.append(("", None))
-        lines.append(
-            ("              lower ←──────────── mood →────────────→ higher",
-             self.palette.accent_low)
-        )
-        lines.append(("", None))
-
-        return lines
-
-
-
-    def _bar_color_for_score(self, score: int) -> str:
-        """Return the specific bar color for a mood score."""
-        if score >= 9:  # Great
-            return self.palette.success
-        elif score >= 7:  # Good
-            return self.palette.accent_low
-        elif score >= 5:  # Meh
-            return "#ffaa00"  # Yellow/orange for neutral
-        elif score >= 3:  # Bad
-            return "#ff6600"  # Orange for concerning
-        else:  # Awful
-            return self.palette.danger
-
-    def _ascii_for_score(self, score: int) -> str:
-        """ASCII replacement for emojis to preserve alignment."""
-        if score >= 9:
-            return ":D"
-        if score >= 7:
-            return ":)"
-        if score >= 5:
-            return ":|"
-        if score >= 3:
-            return ":("
-        return ":'("
-
-    def _history_color_for_score(self, score: int) -> str:
-        """Return color for history bar based on score."""
-        if score >= 7:
-            return self.palette.success
-        if score >= 4:
-            return self.palette.accent_low
-        return self.palette.danger
+            # Empty line between cards
+            history_list.mount(BorderRow("", self.border_style, self.palette))
+        
+        # Update footer with stats
+        self._update_history_footer(entries)
+    
+    def _update_history_footer(self, entries) -> None:
+        """Update the history footer with streak and stats."""
+        if not entries:
+            footer_text = "No entries yet"
+        else:
+            total = len(entries)
+            
+            # Calculate streak (consecutive days above Meh = score > 5)
+            streak = 0
+            today = datetime.now().date()
+            for i in range(len(entries) - 1, -1, -1):
+                entry_date = entries[i].timestamp.date()
+                # Check if it's a consecutive day
+                if (today - entry_date).days == streak and entries[i].score > 5:
+                    streak += 1
+                else:
+                    break
+            
+            # Get current theme name
+            theme_name = self._current_theme_name().replace('_', ' ').title()
+            
+            if streak > 0:
+                footer_text = f"✨ {streak}-day streak above Meh! | {total} moods logged | Theme: {theme_name}"
+            else:
+                footer_text = f"{total} moods logged | Theme: {theme_name}"
+        
+        self.history_footer.update_content(footer_text, style=self.palette.accent_low)
 
     def _cycle_theme(self) -> None:
         """Cycle through available themes and update the UI."""
@@ -831,45 +1036,56 @@ class MainScreen(Screen):
         
         # Show the theme mascot popup!
         theme_name = self._current_theme_name()
-        # Convert snake_case to Title Case for display
         display_name = ' '.join(word.capitalize() for word in theme_name.split('_'))
         mascot_art = THEME_MASCOTS.get(display_name, "No mascot available")
         self.app.push_screen(ThemeMascotPopup(display_name, mascot_art, self.palette))
         
-        # Update the mood companion with current theme
-        if hasattr(self, 'mood_companion'):
-            self.mood_companion.palette = self.palette
-            _, score = MOOD_OPTIONS[self.selected_index]
-            self.mood_companion.update_mood(score)
+        # Update the mood companion
+        self.mood_companion.palette = self.palette
+        _, score = MOOD_OPTIONS[self.selected_index]
+        self.mood_companion.update_mood(score)
         
-        self.render_view()
+        # Update Top/Bottom borders
+        self.query_one(TopBorder).border_style = self.border_style
+        self.query_one(TopBorder).render_content()
+        self.query_one(BottomBorder).border_style = self.border_style
+        self.query_one(BottomBorder).render_content()
+        
+        # Update Divider
+        self.history_divider.border_style = self.border_style
+        self.history_divider.render_content()
+        
+        # Update BorderRows
+        for row in self.query(BorderRow):
+            row.border_style = self.border_style
+            row.palette = self.palette
+            row.render_content()
+        
+        # Update HorizontalMoodSelector
+        self.horizontal_selector.border_style = self.border_style
+        self.horizontal_selector.palette = self.palette
+        self.horizontal_selector.render_content()
+        
+        # Update MoodOptions (kept for compatibility)
+        for opt in self.mood_options:
+            opt.border_style = self.border_style
+            opt.palette = self.palette
+            opt.render_content()
+            
+        # Update HistoryBars
+        self._refresh_history()
 
     def _current_theme_name(self) -> str:
         return self.theme_names[self.theme_index]
 
     @work(exclusive=True)
     async def _save_current_mood(self) -> None:
-        """Save the currently selected mood, optionally with a reflection note.
-
-        This method runs as a Textual worker, which allows it to wait for
-        the reflection screen to close without blocking the main event loop.
-        The exclusive=True parameter ensures only one save operation runs
-        at a time, preventing users from accidentally saving multiple moods
-        if they press Enter repeatedly.
-
-        The async/await pattern here is what makes the modal dialog work.
-        We pause execution, show the reflection screen, and only continue
-        once the user has made their choice.
-        """
         label, score = MOOD_OPTIONS[self.selected_index]
 
-        # Show the reflection prompt and wait for the result
-        # This await is now safe because we're running in a worker context
         note_text = await self.app.push_screen_wait(
             ReflectionPromptScreen(label, score, self.palette)
         )
 
-        # Now we have all the information we need to create the entry
         entries = load_moods()
         entries.append(
             MoodEntry(
@@ -882,53 +1098,70 @@ class MainScreen(Screen):
         save_moods(entries)
         self.sound_manager.play_save()
 
-        # Save preferences so the selected mood persists
         self.preferences.last_selected_mood_index = self.selected_index
         save_preferences(self.preferences)
 
-        # Show animated toast notification
         emoji = self._ascii_for_score(score)
         if note_text:
             message = f"✓ Mood saved! You picked {emoji} {label} today (with note)"
         else:
             message = f"✓ Mood saved! You picked {emoji} {label} today"
         
-        # Trigger toast animation
         asyncio.create_task(self.toast.show(message, self.palette))
 
-        # Refresh the display to show the new entry in history
-        self.render_view()
-        # Animate the new history bars
-        await self._animate_history_bars()
+        self._refresh_history()
+
+    def _bar_color_for_score(self, score: int) -> str:
+        if score >= 9: return "bright_green"
+        elif score >= 7: return "cyan"
+        elif score >= 5: return "yellow"
+        elif score >= 3: return "magenta"
+        else: return "bright_red"
+
+    def _ascii_for_score(self, score: int) -> str:
+        if score >= 9: return ":D"
+        if score >= 7: return ":)"
+        if score >= 5: return ":|"
+        if score >= 3: return ":("
+        return ":'("
+    
+    def _format_time_gap(self, seconds: float) -> str:
+        """Format time gap in human-readable format."""
+        if seconds < 60:
+            return "< 1m"
+        elif seconds < 3600:
+            minutes = int(seconds / 60)
+            return f"{minutes}m"
+        elif seconds < 86400:
+            hours = int(seconds / 3600)
+            minutes = int((seconds % 3600) / 60)
+            if minutes > 0:
+                return f"{hours}h {minutes}m"
+            return f"{hours}h"
+        else:
+            days = int(seconds / 86400)
+            hours = int((seconds % 86400) / 3600)
+            if hours > 0:
+                return f"{days}d {hours}h"
+            return f"{days}d"
+    
+    def _label_for_score(self, score: int) -> str:
+        """Get mood label for score."""
+        if score >= 9: return "Great"
+        if score >= 7: return "Good"
+        if score >= 5: return "Meh"
+        if score >= 3: return "Bad"
+        return "Awful"
+    
+    def _fixed_bar_length_for_score(self, score: int) -> int:
+        """Get fixed bar length based on mood intensity (not relative)."""
+        # Great = 8 blocks, Awful = 2 blocks
+        if score >= 9: return 8
+        if score >= 7: return 6
+        if score >= 5: return 4
+        if score >= 3: return 3
+        return 2
 
     def _calculate_scaled_bar_length(self, score: int, max_score: int, max_bar_width: int = 20) -> int:
-        """Calculate bar length scaled relative to the maximum score in history."""
-        if max_score == 100:
-            return 0
+        if max_score == 100: return 0
         return max(1, int((score / max_score) * max_bar_width))
-    
-    def _animate_mood_selection_change(self, old_index: int, new_index: int) -> None:
-        """Animate the mood option selection change with pulse effect."""
-        # This creates a visual pulse effect when changing selections
-        # The render_view() call will handle the actual visual update
-        pass
-    
-    async def _animate_history_bars(self) -> None:
-        """Animate history bars growing from empty to full."""
-        entries = load_moods()
-        if not entries:
-            return
-        
-        last_entries = entries[-5:]
-        max_score = max(entry.score for entry in last_entries)
-        
-        # Animate each bar sequentially with a slight stagger
-        for i, entry in enumerate(last_entries):
-            date_str = entry.timestamp.strftime("%m-%d")
-            ascii_face = self._ascii_for_score(entry.score)
-            bar_length = self._calculate_scaled_bar_length(
-                entry.score, max_score, max_bar_width=30
-            )
-            
-            # Small delay to stagger the animations
-            await asyncio.sleep(0.05 * i)

@@ -43,12 +43,24 @@ def init_storage() -> None:
 
 
 def load_moods() -> List[MoodEntry]:
+    """Load moods with gentle validation to handle corrupted data."""
     init_storage()
     raw = json.loads(DATA_FILE.read_text(encoding="utf-8"))
-    return [MoodEntry.from_dict(item) for item in raw]
+    
+    entries = []
+    for item in raw:
+        try:
+            entries.append(MoodEntry.from_dict(item))
+        except (ValueError, KeyError, TypeError) as e:
+            # Skip corrupted entries silently
+            print(f"⚠️  Skipping corrupted entry: {e}")
+            continue
+    
+    return entries
 
 
 def save_moods(entries: List[MoodEntry]) -> None:
+    """Save moods with consistent ISO format."""
     init_storage()
     payload = [entry.to_dict() for entry in entries]
     DATA_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
