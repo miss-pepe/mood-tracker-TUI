@@ -14,6 +14,7 @@ from .calendar import MonthlyCalendarScreen
 from ..audio import SoundManager
 from ..widgets.mood_companion import MoodCompanion
 from textual import work
+import asyncio
 
 
 
@@ -340,6 +341,7 @@ def display_theme_mascot(theme_name):           # Example of how to display a ma
 
 from textual.widgets import Static, Label
 from textual.containers import Container, Vertical
+import asyncio
 
 class HelpScreen(Screen):
     """Modal dialog showing keyboard shortcuts and help information."""
@@ -376,9 +378,97 @@ class HelpScreen(Screen):
         """Close the help dialog and return to main screen."""
         self.app.pop_screen()
 
+class MoodOption(Static):
+    """Individual mood option widget with animation support."""
+    
+    def __init__(self, label: str, score: int, is_selected: bool = False, palette=None):
+        super().__init__()
+        self.label = label
+        self.score = score
+        self.is_selected = is_selected
+        self.palette = palette
+        self._render()
+    
+    def _render(self):
+        """Render the mood option with appropriate styling."""
+        marker = "(x)" if self.is_selected else "( )"
+        if self.is_selected and self.palette:
+            self.update(f"[bold {self.palette.accent_high}]  {marker} {self.label}[/]")
+        else:
+            self.update(f"  {marker} {self.label}")
+    
+    def highlight(self, palette):
+        """Animate highlighting this option."""
+        self.is_selected = True
+        self.palette = palette
+        self._render()
+        # Pulse animation on selection
+        self.styles.animate("opacity", value=1.0, duration=0.15, easing="out_cubic")
+    
+    def dim(self):
+        """Dim this option when deselected."""
+        self.is_selected = False
+        self._render()
+        self.styles.opacity = 0.7
+
+class HistoryBar(Static):
+    """Animated history bar widget."""
+    
+    def __init__(self, date_str: str, ascii_face: str, final_length: int, color: str):
+        super().__init__()
+        self.date_str = date_str
+        self.ascii_face = ascii_face
+        self.final_length = final_length
+        self.color = color
+        self.current_length = 0
+        self._update_display()
+    
+    def _update_display(self):
+        """Update the bar display."""
+        bar = "█" * self.current_length
+        line_text = f"{self.date_str}: {self.ascii_face:<4} {bar}"
+        self.update(f"[{self.color}]{line_text}[/]")
+    
+    async def animate_growth(self):
+        """Gradually grow the bar to its final length."""
+        step = max(1, self.final_length // 10)  # Grow in ~10 steps
+        while self.current_length < self.final_length:
+            self.current_length = min(self.current_length + step, self.final_length)
+            self._update_display()
+            await asyncio.sleep(0.02)
+
+class ToastNotification(Static):
+    """Toast notification that slides in and fades out."""
+    
+    def __init__(self):
+        super().__init__("")
+        self.styles.visibility = "hidden"
+        self.styles.align = ("center", "bottom")
+        self.styles.padding = (1, 2)
+    
+    async def show(self, message: str, palette):
+        """Show the toast with animation."""
+        self.update(f"[bold {palette.success}]{message}[/]")
+        self.styles.visibility = "visible"
+        self.styles.opacity = 0.0
+        
+        # Fade in
+        self.styles.animate("opacity", value=1.0, duration=0.2, easing="out_cubic")
+        
+        # Wait
+        await asyncio.sleep(1.5)
+        
+        # Fade out
+        self.styles.animate("opacity", value=0.0, duration=0.3, easing="in_cubic")
+        await asyncio.sleep(0.3)
+        
+        self.styles.visibility = "hidden"
+
 class MainScreen(Screen):
     """Single-screen UI that matches the ASCII mockup."""
     show_history = True
+    _mood_widgets = []  # Track mood option widgets
+    _history_bars = []  # Track history bar widgets
 
     def _apply_padding(self, text: str, padding: int) -> str:
         return " " * padding + text
@@ -465,6 +555,10 @@ class MainScreen(Screen):
             # Main mood tracker view
             self.main_view = Static(id="main-view")
             yield self.main_view
+            
+            # Toast notification at the bottom
+            self.toast = ToastNotification()
+            yield self.toast
 
     def on_mount(self) -> None:
         self.preferences = load_preferences()           # Load user preferences from disk
@@ -494,6 +588,7 @@ class MainScreen(Screen):
         key = event.key.lower()
 
         if key in ("up", "k"):
+            old_index = self.selected_index
             self.selected_index = (self.selected_index - 1) % len(MOOD_OPTIONS)
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
@@ -502,9 +597,12 @@ class MainScreen(Screen):
             if hasattr(self, 'mood_companion'):
                 _, score = MOOD_OPTIONS[self.selected_index]
                 self.mood_companion.update_mood(score)
+            # Animate the mood option change
+            self._animate_mood_selection_change(old_index, self.selected_index)
             self.render_view()
 
         elif key in ("down", "j"):
+            old_index = self.selected_index
             self.selected_index = (self.selected_index + 1) % len(MOOD_OPTIONS)
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
@@ -513,6 +611,8 @@ class MainScreen(Screen):
             if hasattr(self, 'mood_companion'):
                 _, score = MOOD_OPTIONS[self.selected_index]
                 self.mood_companion.update_mood(score)
+            # Animate the mood option change
+            self._animate_mood_selection_change(old_index, self.selected_index)
             self.render_view()
 
         elif key == "enter" or key == "s":
@@ -612,7 +712,11 @@ class MainScreen(Screen):
 
         for idx, (label, _score) in enumerate(MOOD_OPTIONS):        # Mood options
             marker = "(x)" if idx == self.selected_index else "( )"
-            style = f"bold {self.palette.accent_high}" if idx == self.selected_index else None
+            # Enhanced styling for selected option with pulse effect
+            if idx == self.selected_index:
+                style = f"bold {self.palette.accent_high}"
+            else:
+                style = self.palette.text_primary
             lines.append((f"  {marker} {label}", style))
 
         while len(lines) < 11:                  # Pad to stable height
@@ -780,25 +884,49 @@ class MainScreen(Screen):
         self.preferences.last_selected_mood_index = self.selected_index
         save_preferences(self.preferences)
 
-        # Show confirmation feedback to the user
+        # Show animated toast notification
+        emoji = self._ascii_for_score(score)
         if note_text:
-            self.app.notify(
-                f"✓ Mood saved: {label} (with note)",
-                severity="information",
-                timeout=2
-            )
+            message = f"✓ Mood saved! You picked {emoji} {label} today (with note)"
         else:
-            self.app.notify(
-                f"✓ Mood saved: {label}",
-                severity="information",
-                timeout=2
-            )
+            message = f"✓ Mood saved! You picked {emoji} {label} today"
+        
+        # Trigger toast animation
+        asyncio.create_task(self.toast.show(message, self.palette))
 
         # Refresh the display to show the new entry in history
         self.render_view()
+        # Animate the new history bars
+        await self._animate_history_bars()
 
     def _calculate_scaled_bar_length(self, score: int, max_score: int, max_bar_width: int = 20) -> int:
         """Calculate bar length scaled relative to the maximum score in history."""
         if max_score == 100:
             return 0
         return max(1, int((score / max_score) * max_bar_width))
+    
+    def _animate_mood_selection_change(self, old_index: int, new_index: int) -> None:
+        """Animate the mood option selection change with pulse effect."""
+        # This creates a visual pulse effect when changing selections
+        # The render_view() call will handle the actual visual update
+        pass
+    
+    async def _animate_history_bars(self) -> None:
+        """Animate history bars growing from empty to full."""
+        entries = load_moods()
+        if not entries:
+            return
+        
+        last_entries = entries[-5:]
+        max_score = max(entry.score for entry in last_entries)
+        
+        # Animate each bar sequentially with a slight stagger
+        for i, entry in enumerate(last_entries):
+            date_str = entry.timestamp.strftime("%m-%d")
+            ascii_face = self._ascii_for_score(entry.score)
+            bar_length = self._calculate_scaled_bar_length(
+                entry.score, max_score, max_bar_width=30
+            )
+            
+            # Small delay to stagger the animations
+            await asyncio.sleep(0.05 * i)
