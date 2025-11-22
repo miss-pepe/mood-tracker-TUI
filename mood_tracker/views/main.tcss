@@ -1,0 +1,13 @@
+/* Main screen styling */
+
+#mood-companion {
+    height: auto;
+    max-height: 5;
+    padding: 1 2;
+    border: solid $accent;
+    content-align: center middle;
+}
+
+#main-view {
+    height: auto;
+}

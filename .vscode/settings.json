@@ -1,5 +1,10 @@
 {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "inlineChat.enableV2": true,
-    "inlineChat.notebookAgent": false
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "inlineChat.enableV2": true,
+  "inlineChat.notebookAgent": false,
+  "editor.wordWrap": "on",
+  "editor.formatOnSave": true,
+  "editor.mouseWheelZoom": true,
+  "editor.formatOnPaste": true,
+  "editor.fontSize": 10
 }

@@ -15,10 +15,12 @@ from ..audio import SoundManager
 from ..widgets.mood_companion import MoodCompanion
 from textual import work
 import asyncio
+import random
 
-
-
-BOX_WIDTH = 74                      # ASCII box pieces
+# Box sizing - made responsive
+MIN_BOX_WIDTH = 100                 # Minimum box width
+MAX_BOX_WIDTH = 140                 # Maximum box width
+BOX_WIDTH = 125                     # Default/preferred box width
 INNER_WIDTH = BOX_WIDTH - 2
 
 MOOD_OPTIONS = [                      # Mood options as (label_for_ui, numeric_score_to_save)
