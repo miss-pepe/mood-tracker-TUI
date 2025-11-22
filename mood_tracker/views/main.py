@@ -353,14 +353,16 @@ class HelpScreen(Screen):
             yield Static(
                 "│                                          │\n"
                 "│  Navigation:                             │\n"
-                "│    ↑/↓ or K/J  -  Select mood            │\n"
+                "│    ←/→ or H/L  -  Select mood            │\n"
                 "│    Enter or S  -  Save current mood      │\n"
                 "│                                          │\n"
                 "│  Actions:                                │\n"
                 "│    T  -  Cycle through themes            │\n"
                 "│    H  -  Toggle history panel            │\n"
+                "│    X  -  Toggle extended history view    │\n"
                 "│    M  -  Monthly calendar view           │\n"
                 "│    E  -  Export data                     │\n"
+                "│    V  -  View full history               │\n"
                 "│    ?  -  Show this help dialog           │\n"
                 "│    Q  -  Quit application                │\n"
                 "│                                          │\n"
@@ -824,7 +826,7 @@ class MainScreen(Screen):
                 
                 yield BorderRow("How are you feeling today?", self.border_style, self.palette, style=f"bold {self.palette.accent_high}", centered=True)
                 yield BorderRow("", self.border_style, self.palette)
-                yield BorderRow("[←/→ to select, Enter to confirm]", self.border_style, self.palette, style=self.palette.text_muted, centered=True)
+                yield BorderRow("[←/→ or H/L to select, Enter to confirm]", self.border_style, self.palette, style=self.palette.text_muted, centered=True)
                 yield BorderRow("", self.border_style, self.palette)
                 
                 # Horizontal Mood Selector
@@ -866,6 +868,15 @@ class MainScreen(Screen):
 
     async def on_key(self, event: events.Key) -> None:
         """Handle keyboard input for navigation and actions."""
+        # Handle uppercase keys before converting to lowercase
+        if event.key == "H":
+            # Toggle history panel visibility
+            self.show_history = not self.show_history
+            self._update_history_visibility()
+            self.preferences.show_history_panel = self.show_history
+            save_preferences(self.preferences)
+            return
+
         key = event.key.lower()
 
         if key in ("left", "h"):
@@ -880,16 +891,10 @@ class MainScreen(Screen):
         elif key == "t":
             self._cycle_theme()
 
-        elif key == "h":
+        elif key == "x":
             # Toggle extended history view (12 vs all entries)
             self.show_extended_history = not self.show_extended_history
             self._refresh_history()
-            
-            # Toggle footer visibility too
-            if self.history_footer.styles.display == "block":
-                self.history_footer.styles.display = "none"
-            else:
-                self.history_footer.styles.display = "block"
 
         elif key == "question_mark":
             self.app.push_screen(HelpScreen())
