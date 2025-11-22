@@ -6,37 +6,60 @@ There is a live preview of this project for you to view using the link here :
 [TUI Mood Tracking](https://miss-pepe.github.io/mood-tracker-TUI "TUI Mood Tracker")
 
 ## Features
-- Log a 1-10 mood rating with optional tag and note.
-- See the five most recent entries on the home screen.
-- Navigate to the trends screen for an ASCII sparkline and a history table of recent moods.
-- Data is persisted to `data/moods.json` so entries survive restarts.
 
-## Getting started
-1. Create and activate a virtual environment (optional):
+- **Quick Mood Logging**: Select from 5 mood options (Great, Good, Meh, Bad, Awful) with easy keyboard navigation
+- **Vim-Style Navigation**: Use K/J or arrow keys to navigate - whichever you prefer!
+- **Mood History Panel**: View your recent mood entries at a glance (toggle with `H`)
+- **Monthly Calendar View**: See your moods displayed on a calendar (press `M`)
+- **Export Functionality**: Export your mood data for backup or analysis (press `E`)
+- **Rich Theme System**: 60+ beautiful themes with custom color palettes and ASCII mascots
+- **Sound Effects**: Audio feedback for interactions (when enabled)
+- **Persistent Storage**: All entries saved to `data/moods.json`
+- **Built-in Help**: Press `?` to see all keyboard shortcuts
+- **Preference Persistence**: Remembers your last selected mood, theme choice, and panel visibility
+
+## Getting Started
+
+1. **Create and activate a virtual environment** (recommended):
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate
+   python3 -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
-2. Install dependencies:
+
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
-3. Run the app:
+
+3. **Run the app**:
    ```bash
-   python -m app.main
+   python run.py
    ```
 
 ## Controls
-- `n` — Focus the rating field to log a new mood.
-- `g` — Open the trends/history view.
-- `q` — Quit the app.
-- `t` — Cycle through the available themes.
-- On the trends screen: `b` to go back, `r` to refresh data.
 
-## Data location
-Entries are stored as JSON at `data/moods.json` (created on first save). Delete that file if you want to wipe your log.
+### Navigation
+- `↑` or `K` — Move selection up
+- `↓` or `J` — Move selection down (Vim-style keys supported!)
 
-## Themes Availiable
+### Actions
+- `Enter` or `S` — Save current mood entry
+- `T` — Cycle through available themes
+- `H` — Toggle history panel visibility
+- `M` — Open monthly calendar view
+- `E` — Export data
+- `?` — Show help dialog with keyboard shortcuts
+- `Q` — Quit the application
+
+## Data Storage
+
+Your mood entries are automatically saved to `data/moods.json` in the project directory. User preferences (theme choice, last selected mood, panel visibility) are stored in `~/.mood_tracker/preferences.json`.
+
+To reset your data:
+- Delete `data/moods.json` to clear all mood entries
+- Delete `~/.mood_tracker/preferences.json` to reset preferences to defaults
+
+## Themes Available
 - Neon Midnight  
 - Galactic Slushie  
 - Retro Arcade CRT  
@@ -87,3 +110,42 @@ Entries are stored as JSON at `data/moods.json` (created on first save). Delete 
 - Palenight
 - Jellybeans
 - Horizon Dark
+
+
+## Project Structure
+
+```
+mood-tracker-TUI/
+├── mood_tracker/           # Main application package
+│   ├── models/            # Data models and storage
+│   ├── views/             # UI screens (main, calendar, export, etc.)
+│   ├── widgets/           # Custom Textual widgets
+│   ├── sounds/            # Audio files for sound effects
+│   ├── app.py             # Main application class
+│   ├── audio.py           # Sound management
+│   └── theme.py           # Theme definitions and palettes
+├── data/                  # Mood entry storage (auto-created)
+├── run.py                 # Application entry point
+└── requirements.txt       # Python dependencies
+```
+
+## Dependencies
+
+Built with:
+- [Textual](https://github.com/Textualize/textual) - Terminal UI framework
+- Python 3.9+
+
+## Tips & Tricks
+
+- **Accessibility**: The app works great with screen readers and supports keyboard-only navigation
+- **Customization**: Each theme includes a unique ASCII mascot that appears when you select it
+- **Performance**: The history panel can be toggled off (`H`) for a cleaner, more minimal view
+- **Portability**: Copy the `data/moods.json` file to backup or transfer your mood history between machines
+
+## Contributing
+
+This is a personal hobby project, but suggestions and feedback are welcome! Feel free to fork and experiment.
+
+## License
+
+MIT License - feel free to use and modify as you like.
