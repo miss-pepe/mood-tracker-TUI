@@ -84,6 +84,10 @@ class ReflectionPromptScreen(Screen):
         When a button is clicked, we need to dismiss this screen and
         return data to whoever called it. Textual's dismiss() method
         lets us return a value, which the calling screen can then use.
+        
+        IMPORTANT: This method is synchronous (not async) because dismiss()
+        must happen immediately and synchronously from within the screen's
+        own event handlers.
         """
         if event.button.id == "save-with-note":
             # Grab whatever they typed, strip whitespace, and treat
@@ -96,12 +100,17 @@ class ReflectionPromptScreen(Screen):
             # Return None to indicate they don't want to add a note
             self.dismiss(None)
     
-    async def on_key(self, event: events.Key) -> None:
+    def on_key(self, event: events.Key) -> None:
         """Handle keyboard shortcuts for power users.
         
         We want to support quick workflows, so Enter should save
         and Escape should skip. This lets keyboard-focused users
         move through the app without reaching for the mouse.
+        
+        IMPORTANT: This method is synchronous (not async) because we're
+        calling dismiss() which must happen immediately. The async keyword
+        was causing Textual to treat this handler differently, leading to
+        the "Can't await screen.dismiss()" error.
         """
         key = event.key.lower()
         

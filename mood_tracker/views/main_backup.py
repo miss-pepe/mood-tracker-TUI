@@ -4,14 +4,14 @@ from .export import ExportScreen
 from datetime import date, datetime
 from textual.app import ComposeResult
 from textual.screen import Screen
-from textual.widgets import Static
+from textual.widgets import Static, TextArea
 from textual import events
 from ..models.storage import load_moods, save_moods, MoodEntry
 from ..theme import DEFAULT_THEME_NAME, THEMES, get_palette, get_border_style
 from ..models.preferences import load_preferences, save_preferences, UserPreferences
 from .calendar import MonthlyCalendarScreen
 from ..audio import SoundManager
-from textual import work
+
 
 
 
@@ -336,8 +336,49 @@ def display_theme_mascot(theme_name):           # Example of how to display a ma
     else:
         print("No mascot found for this theme!")         # Fallback if theme doesn't have a mascot yet
 
+# display_theme_mascot("Neon Midnight")          
+
 from textual.widgets import Static, Label
 from textual.containers import Container, Vertical
+
+class ReflectionPromptScreen(Screen):
+    """Modal dialog for users to add a note/reflection to their mood entry."""
+    
+    BINDINGS = [
+        ("escape", "cancel", "Cancel"),
+        ("ctrl+s", "submit", "Save"),
+    ]
+    
+    def __init__(self, label: str, score: int, palette):
+        super().__init__()
+        self.label = label
+        self.score = score
+        self.palette = palette
+        self.note_text = ""
+    
+    def compose(self) -> ComposeResult:
+        from textual.widgets import TextArea, Button
+        with Container(id="reflection-dialog"):
+            yield Static(f"Add a reflection for: {self.label}", id="reflection-header")
+            yield TextArea(id="reflection-input")
+            with Container(id="reflection-buttons"):
+                yield Button("Save (Ctrl+S)", id="save-button", variant="primary")
+                yield Button("Skip (ESC)", id="cancel-button")
+    
+    def on_mount(self) -> None:
+        text_area = self.query_one("#reflection-input", TextArea)
+        text_area.focus()
+    
+    def action_submit(self) -> None:
+        """Save the mood with the reflection note."""
+        text_area = self.query_one("#reflection-input", TextArea)
+        self.note_text = text_area.text.strip() if text_area.text else None
+        self.dismiss(self.note_text)
+    
+    def action_cancel(self) -> None:
+        """Cancel without saving a note."""
+        self.dismiss(None)
+
 
 class HelpScreen(Screen):
     """Modal dialog showing keyboard shortcuts and help information."""
@@ -359,8 +400,6 @@ class HelpScreen(Screen):
                 "│  Actions:                                │\n"
                 "│    T  -  Cycle through themes            │\n"
                 "│    H  -  Toggle history panel            │\n"
-                "│    M  -  Monthly calendar view           │\n"
-                "│    E  -  Export data                     │\n"
                 "│    ?  -  Show this help dialog           │\n"
                 "│    Q  -  Quit application                │\n"
                 "│                                          │\n"
@@ -469,49 +508,50 @@ class MainScreen(Screen):
             self.theme_index = self.theme_names.index(DEFAULT_THEME_NAME)         # If saved theme doesn't exist, fall back to default
 
         self.palette = get_palette(self.theme_names[self.theme_index])
-        self.border_style = get_border_style(self.theme_names[self.theme_index])
-        self.render_view()
+        self.border_style = get_border_style(self.theme_names[self.theme_index])  # MOVED UP!
+        self.render_view()  # Now this is safe because border_style exists
 
     async def on_key(self, event: events.Key) -> None:
         """Handle keyboard input for navigation and actions."""
         key = event.key.lower()
 
-        if key in ("up", "k"):
+        if key in ("up", "k"):                        # Navigation keys
             self.selected_index = (self.selected_index - 1) % len(MOOD_OPTIONS)
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
-            self.sound_manager.play_selection()
+            self.sound_manager.play_selection()  # Add this line
             self.render_view()
-
+    
         elif key in ("down", "j"):
             self.selected_index = (self.selected_index + 1) % len(MOOD_OPTIONS)
             self.preferences.last_selected_mood_index = self.selected_index
             save_preferences(self.preferences)
-            self.sound_manager.play_selection()
+            self.sound_manager.play_selection()  # Add this line
             self.render_view()
+    
+                        # Action keys
+        elif key == "enter" or key == "s":  # Enter or S to save
+            self.render_view()
+            await self._save_current_mood()
 
-        elif key == "enter" or key == "s":
-        # Call the worker method without await
-        # The @work decorator handles spawning it in the right context
-            self._save_current_mood()
-
-        elif key == "t":
+        elif key == "t":        # Toggle theme
             self._cycle_theme()
-
-        elif key == "h":
+    
+        elif key == "h":        # Toggle history panel
             self.show_history = not self.show_history
             self.preferences.show_history_panel = self.show_history
             save_preferences(self.preferences)
             self.render_view()
-
-        elif key == "question_mark":
+    
+        elif key == "question_mark":  # ? for help
             self._show_help_dialog()
 
-        elif key == "e":
+        elif key == "e":  # E for export
             self.app.push_screen(ExportScreen(self.palette))
 
-        elif key == "m":
+        elif key == "m":  # M for monthly view
             self.app.push_screen(MonthlyCalendarScreen(self.palette, self.border_style))
+
     # ---------------- Rendering helpers ----------------
 
     def render_view(self) -> None:
@@ -694,7 +734,7 @@ class MainScreen(Screen):
         """Cycle through available themes and update the UI."""
         self.theme_index = (self.theme_index + 1) % len(self.theme_names)
         self.palette = get_palette(self.theme_names[self.theme_index])            
-        self.border_style = get_border_style(self.theme_names[self.theme_index])
+        self.border_style = get_border_style(self.theme_names[self.theme_index])  # Add this line
         self.preferences.current_theme = self.theme_names[self.theme_index]
         save_preferences(self.preferences)
         self.render_view()
@@ -702,24 +742,20 @@ class MainScreen(Screen):
     def _current_theme_name(self) -> str:
         return self.theme_names[self.theme_index]
 
-    @work(exclusive=True)
     async def _save_current_mood(self) -> None:
         """Save the currently selected mood, optionally with a reflection note.
-
-        This method runs as a Textual worker, which allows it to wait for
-        the reflection screen to close without blocking the main event loop.
-        The exclusive=True parameter ensures only one save operation runs
-        at a time, preventing users from accidentally saving multiple moods
-        if they press Enter repeatedly.
-
+    
+        This method now follows a two-step process:
+        1. Show the reflection prompt and wait for user input
+        2. Save the mood with whatever note they provided (or None)
+    
         The async/await pattern here is what makes the modal dialog work.
         We pause execution, show the reflection screen, and only continue
         once the user has made their choice.
         """
         label, score = MOOD_OPTIONS[self.selected_index]
-
         # Show the reflection prompt and wait for the result
-        # This await is now safe because we're running in a worker context
+        # The result will be either a note string or None
         note_text = await self.app.push_screen_wait(
             ReflectionPromptScreen(label, score, self.palette)
         )
@@ -730,18 +766,20 @@ class MainScreen(Screen):
             MoodEntry(
                 timestamp=datetime.now(),
                 score=score,
-                tag=None,
-                note=note_text,
+                tag=None,  # We're not using tags yet, but the field is ready
+                note=note_text,  # This is now the user's reflection
             )
         )
         save_moods(entries)
-        self.sound_manager.play_save()
+        self.sound_manager.play_save()  # Add this line
+
 
         # Save preferences so the selected mood persists
         self.preferences.last_selected_mood_index = self.selected_index
         save_preferences(self.preferences)
 
         # Show confirmation feedback to the user
+        # The message changes based on whether they added a note
         if note_text:
             self.app.notify(
                 f"✓ Mood saved: {label} (with note)",
